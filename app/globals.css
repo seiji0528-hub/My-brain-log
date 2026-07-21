@@ -1,0 +1,79 @@
+@import url("https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Noto+Serif+JP:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  background-color: #f6f3ec;
+}
+
+body {
+  color: #22252b;
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* iPhone のホームバー等セーフエリア対応 */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* タップ領域は最低44pxを確保 */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* フォーム入力時にiOSが自動ズームしないよう16px以上を確保 */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #dcd6c7;
+  border-radius: 999px;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.18s ease-out;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
