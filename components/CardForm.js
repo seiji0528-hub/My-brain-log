@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatRawText } from "@/lib/aiClient";
 import { normalizeTags } from "@/lib/storage";
 
-export default function CardForm({ onClose, onSave }) {
+export default function CardForm({ onClose, onSave, initialData = null }) {
   const [rawText, setRawText] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsText, setTagsText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [step, setStep] = useState("raw"); // "raw" | "review"
+  // 初期データがある場合は最初から review 画面にする
+  const [step, setStep] = useState(initialData ? "review" : "raw");
+
+  // 再利用（コピー）用データが渡された場合にフォームへセット
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || "");
+      setBody(initialData.body || "");
+      setTagsText((initialData.tags || []).join(" "));
+    }
+  }, [initialData]);
 
   async function handleFormat() {
     if (!rawText.trim()) return;
@@ -47,13 +57,13 @@ export default function CardForm({ onClose, onSave }) {
   }
 
   return (
-    /* items-end から items-center に変更して中央寄せにし、p-4 で余白を確保 */
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 animate-fade-in">
-      {/* max-h-[90vh] を max-h-[85dvh] (動的高さ) に変更し、キーボード追従に対応 */}
       <div className="safe-bottom flex max-h-[85dvh] w-full max-w-lg flex-col rounded-2xl bg-paper shadow-xl animate-sheet-up">
-        {/* ヘッダー部分は固定 */}
+        {/* ヘッダー */}
         <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="font-display text-base font-bold">新しい思考を記録</h2>
+          <h2 className="font-display text-base font-bold">
+            {initialData ? "思考を再利用・編集" : "新しい思考を記録"}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -64,7 +74,7 @@ export default function CardForm({ onClose, onSave }) {
           </button>
         </div>
 
-        {/* 入力エリア：画面が小さくなったらここだけがスクロールする */}
+        {/* 入力エリア */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {step === "raw" && (
             <div className="flex flex-col gap-3">
@@ -75,7 +85,7 @@ export default function CardForm({ onClose, onSave }) {
                 autoFocus
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
-                rows={5} /* 高さを少しコンパクトにしてキーボード圧迫を回避 */
+                rows={5}
                 placeholder="例）頭に浮かんだメモやアイデアを自由に入力してください…"
                 className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
               />
@@ -104,7 +114,7 @@ export default function CardForm({ onClose, onSave }) {
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={4} /* 高さを少しコンパクトにしてキーボード圧迫を回避 */
+                  rows={4}
                   className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </div>
@@ -125,7 +135,7 @@ export default function CardForm({ onClose, onSave }) {
           )}
         </div>
 
-        {/* フッターボタン部分：画面下に潰れないように shrink-0 を追加 */}
+        {/* フッターボタン部分 */}
         <div className="flex shrink-0 gap-2 border-t border-line px-4 py-3">
           {step === "raw" && (
             <>
@@ -150,13 +160,16 @@ export default function CardForm({ onClose, onSave }) {
 
           {step === "review" && (
             <>
-              <button
-                type="button"
-                onClick={() => setStep("raw")}
-                className="tap-target flex-1 rounded-full border border-line px-4 text-sm font-medium text-ink-soft"
-              >
-                戻る
-              </button>
+              {/* 再利用時は「戻る」ボタンを非表示にする（raw画面に戻る必要がないため） */}
+              {!initialData && (
+                <button
+                  type="button"
+                  onClick={() => setStep("raw")}
+                  className="tap-target flex-1 rounded-full border border-line px-4 text-sm font-medium text-ink-soft"
+                >
+                  戻る
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSave}
