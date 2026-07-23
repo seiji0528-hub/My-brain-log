@@ -10,14 +10,21 @@ function formatDate(iso) {
   ).padStart(2, "0")}`;
 }
 
-export default function CardItem({ card, expanded, onToggle, onDelete, onTagClick }) {
+export default function CardItem({
+  card,
+  expanded,
+  onToggle,
+  onDelete,
+  onCopy, // ← 再利用（コピー）用の関数を受け取るように追加
+  onTagClick,
+}) {
   const spineColor = card.tags.length ? colorForTag(card.tags[0]).bar : "bg-line";
 
   return (
     <div className="relative overflow-hidden rounded-card border border-line bg-paper-card shadow-card animate-fade-in">
       <div className={`absolute left-0 top-0 h-full w-1.5 ${spineColor}`} />
 
-      {/* タイトル・本文部分だけをタップ可能にする（タグのbuttonをネストしない） */}
+      {/* タイトル・本文部分 */}
       <div
         role="button"
         tabIndex={0}
@@ -60,11 +67,28 @@ export default function CardItem({ card, expanded, onToggle, onDelete, onTagClic
         </div>
       )}
 
+      {/* カード展開時のアクションエリア */}
       {expanded && (
-        <div className="flex justify-end border-t border-line px-4 py-2">
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-2">
+          {/* 再利用（コピー）ボタンを追加 */}
           <button
             type="button"
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onCopy) onCopy(card);
+            }}
+            className="tap-target rounded-md px-3 text-xs font-medium text-ink-soft active:bg-paper-dim"
+          >
+            このカードを再利用
+          </button>
+          
+          {/* 削除ボタン */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             className="tap-target rounded-md px-3 text-xs font-medium text-ink-faint active:bg-paper-dim"
           >
             このカードを削除
