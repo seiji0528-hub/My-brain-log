@@ -3,6 +3,11 @@ import "./globals.css";
 export const metadata = {
   title: "My Brain Log｜思考ログ",
   description: "1カード=1思考。日々の気づきを蓄積し、AIが関連付けてくれる第二の脳。",
+  // ↓ ここを追加！ Safariや各種ブラウザにアイコンの場所を伝えます
+  icons: {
+    icon: "/apple-icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 // viewport-fit=cover により iPhone のノッチ/ホームバー領域までレイアウトを広げ、
