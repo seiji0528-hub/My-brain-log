@@ -6,7 +6,7 @@ import {
   saveCards, 
   createCard, 
   findRelatedCards, 
-  deleteCard // deleteCardFromSupabase から deleteCard に変更
+  deleteCard
 } from "@/lib/storage";
 import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
@@ -20,6 +20,8 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  // コピー（再利用）対象のカードデータを保持するステート
+  const [initialFormData, setInitialFormData] = useState(null);
 
   // 初回読み込み：Supabaseからデータを取得
   useEffect(() => {
@@ -64,22 +66,32 @@ export default function Home() {
     setCards(updatedCards);
 
     setFormOpen(false);
+    setInitialFormData(null); // フォームを閉じた後に初期化
     setExpandedId(newCardData.id);
   }
 
   // 削除処理
   async function handleDelete(id) {
     try {
-      // Supabaseから削除を実行
       await deleteCard(id);
-
-      // 成功したら画面上のステートから除去
       setCards((prev) => prev.filter((c) => c.id !== id));
       if (expandedId === id) setExpandedId(null);
     } catch (error) {
       console.error("削除処理に失敗しました:", error);
       alert("削除に失敗しました。もう一度お試しください。");
     }
+  }
+
+  // 再利用（コピー）ボタンが押された時の処理
+  function handleCopyCard(card) {
+    setInitialFormData(card);
+    setFormOpen(true);
+  }
+
+  // フォームを閉じる処理
+  function handleCloseForm() {
+    setFormOpen(false);
+    setInitialFormData(null);
   }
 
   return (
@@ -132,6 +144,7 @@ export default function Home() {
                 setExpandedId((prev) => (prev === card.id ? null : card.id))
               }
               onDelete={() => handleDelete(card.id)}
+              onCopy={handleCopyCard} // ← 再利用処理を渡す
               onTagClick={(t) => setActiveTag((prev) => (prev === t ? null : t))}
             />
             {expandedId === card.id && (
@@ -143,7 +156,10 @@ export default function Home() {
 
       <button
         type="button"
-        onClick={() => setFormOpen(true)}
+        onClick={() => {
+          setInitialFormData(null); // 新規作成時は空で開く
+          setFormOpen(true);
+        }}
         className="tap-target fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-paper shadow-lg active:scale-95"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         aria-label="新しい思考を記録"
@@ -152,7 +168,11 @@ export default function Home() {
       </button>
 
       {formOpen && (
-        <CardForm onClose={() => setFormOpen(false)} onSave={handleSaveCard} />
+        <CardForm
+          onClose={handleCloseForm}
+          onSave={handleSaveCard}
+          initialData={initialFormData} // ← コピー対象のデータをフォームに渡す
+        />
       )}
     </main>
   );
