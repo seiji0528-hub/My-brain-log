@@ -47,9 +47,12 @@ export default function CardForm({ onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 animate-fade-in">
-      <div className="animate-sheet-up safe-bottom flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl bg-paper shadow-xl">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+    /* items-end から items-center に変更して中央寄せにし、p-4 で余白を確保 */
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 animate-fade-in">
+      {/* max-h-[90vh] を max-h-[85dvh] (動的高さ) に変更し、キーボード追従に対応 */}
+      <div className="safe-bottom flex max-h-[85dvh] w-full max-w-lg flex-col rounded-2xl bg-paper shadow-xl animate-sheet-up">
+        {/* ヘッダー部分は固定 */}
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
           <h2 className="font-display text-base font-bold">新しい思考を記録</h2>
           <button
             type="button"
@@ -61,6 +64,7 @@ export default function CardForm({ onClose, onSave }) {
           </button>
         </div>
 
+        {/* 入力エリア：画面が小さくなったらここだけがスクロールする */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {step === "raw" && (
             <div className="flex flex-col gap-3">
@@ -71,7 +75,7 @@ export default function CardForm({ onClose, onSave }) {
                 autoFocus
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
-                rows={7}
+                rows={5} /* 高さを少しコンパクトにしてキーボード圧迫を回避 */
                 placeholder="例）LINEの返信が遅い理由って、言い切る力と合わせる力が拮抗してるからかも…対面だと合わせる力が勝って楽やねんな"
                 className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
               />
@@ -100,7 +104,7 @@ export default function CardForm({ onClose, onSave }) {
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  rows={6}
+                  rows={4} /* 高さを少しコンパクトにしてキーボード圧迫を回避 */
                   className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </div>
@@ -121,7 +125,8 @@ export default function CardForm({ onClose, onSave }) {
           )}
         </div>
 
-        <div className="flex gap-2 border-t border-line px-4 py-3">
+        {/* フッターボタン部分：画面下に潰れないように shrink-0 を追加 */}
+        <div className="flex shrink-0 gap-2 border-t border-line px-4 py-3">
           {step === "raw" && (
             <>
               <button
