@@ -76,7 +76,7 @@ export default function CardForm({ onClose, onSave }) {
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 rows={5} /* 高さを少しコンパクトにしてキーボード圧迫を回避 */
-                placeholder="例）LINEの返信が遅い理由って、言い切る力と合わせる力が拮抗してるからかも…対面だと合わせる力が勝って楽やねんな"
+                placeholder="例）頭に浮かんだメモやアイデアを自由に入力してください…"
                 className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
               />
               {aiError && <p className="text-xs text-[#93445A]">{aiError}</p>}
