@@ -6,7 +6,7 @@ import {
   saveCards, 
   createCard, 
   findRelatedCards, 
-  deleteCardFromSupabase // Step2: Supabaseからの削除関数をインポート
+  deleteCard // deleteCardFromSupabase から deleteCard に変更
 } from "@/lib/storage";
 import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
@@ -55,12 +55,11 @@ export default function Home() {
   const expandedCard = cards.find((c) => c.id === expandedId) || null;
   const related = expandedCard ? findRelatedCards(expandedCard, cards) : [];
 
-  // 保存処理：Supabaseへ追加し、画面のリストを更新
+  // 保存処理
   async function handleSaveCard(data) {
     const newCardData = createCard(data);
     await saveCards(newCardData);
 
-    // 最新のデータをSupabaseから再読み込みして画面に反映
     const updatedCards = await loadCards();
     setCards(updatedCards);
 
@@ -68,13 +67,13 @@ export default function Home() {
     setExpandedId(newCardData.id);
   }
 
-  // Step2: 削除処理（Supabaseから削除実行後にUIを更新）
+  // 削除処理
   async function handleDelete(id) {
     try {
-      // 1. Supabaseから削除
-      await deleteCardFromSupabase(id);
+      // Supabaseから削除を実行
+      await deleteCard(id);
 
-      // 2. 画面上のステートを更新
+      // 成功したら画面上のステートから除去
       setCards((prev) => prev.filter((c) => c.id !== id));
       if (expandedId === id) setExpandedId(null);
     } catch (error) {
