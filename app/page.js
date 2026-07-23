@@ -13,6 +13,9 @@ import RelatedCards from "@/components/RelatedCards";
 import SearchBar from "@/components/SearchBar";
 import CardForm from "@/components/CardForm";
 
+// 1桁のパスワード（ここを好きな数字に変えてもOK）
+const PASSCODE = "0";
+
 export default function Home() {
   const [cards, setCards] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -20,11 +23,20 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
-  // コピー（再利用）対象のカードデータを保持するステート
   const [initialFormData, setInitialFormData] = useState(null);
 
-  // 初回読み込み：Supabaseからデータを取得
+  // パスコード認証関連のステート
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passInput, setPassInput] = useState("");
+  const [passError, setPassError] = useState(false);
+
+  // 初回起動時のチェック：すでに認証済みか確認 ＆ Supabaseからデータを取得
   useEffect(() => {
+    const authStatus = localStorage.getItem("app_authenticated");
+    if (authStatus === "true") {
+      setIsAuthenticated(true);
+    }
+
     async function fetchCards() {
       const data = await loadCards();
       setCards(data);
@@ -32,6 +44,18 @@ export default function Home() {
     }
     fetchCards();
   }, []);
+
+  // パスコード送信処理
+  function handlePassSubmit(e) {
+    e.preventDefault();
+    if (passInput === PASSCODE) {
+      localStorage.setItem("app_authenticated", "true");
+      setIsAuthenticated(true);
+      setPassError(false);
+    } else {
+      setPassError(true);
+    }
+  }
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -66,7 +90,7 @@ export default function Home() {
     setCards(updatedCards);
 
     setFormOpen(false);
-    setInitialFormData(null); // フォームを閉じた後に初期化
+    setInitialFormData(null);
     setExpandedId(newCardData.id);
   }
 
@@ -94,6 +118,48 @@ export default function Home() {
     setInitialFormData(null);
   }
 
+  // --- 未認証時のロック画面 ---
+  if (!isAuthenticated) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center px-6">
+        <div className="w-full rounded-2xl border border-line bg-paper-card p-6 shadow-xl text-center">
+          <h1 className="font-display text-xl font-bold text-ink">My Brain Log</h1>
+          <p className="mt-2 text-xs text-ink-faint">
+            1桁のパスワードを入力してください
+          </p>
+
+          <form onSubmit={handlePassSubmit} className="mt-6 flex flex-col items-center gap-3">
+            <input
+              type="password"
+              maxLength={1}
+              inputMode="numeric"
+              value={passInput}
+              onChange={(e) => {
+                setPassInput(e.target.value);
+                setPassError(false);
+              }}
+              placeholder="0"
+              autoFocus
+              className="h-12 w-16 text-center text-xl font-bold rounded-card border border-line bg-paper text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
+            />
+
+            {passError && (
+              <p className="text-xs text-[#93445A]">パスワードが違います</p>
+            )}
+
+            <button
+              type="submit"
+              className="mt-2 w-full rounded-full bg-accent py-2.5 text-sm font-bold text-paper active:scale-95 transition-transform"
+            >
+              ロック解除
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  // --- 認証済みのメイン画面 ---
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col px-4">
       <header className="pt-5 pb-1">
@@ -144,7 +210,7 @@ export default function Home() {
                 setExpandedId((prev) => (prev === card.id ? null : card.id))
               }
               onDelete={() => handleDelete(card.id)}
-              onCopy={handleCopyCard} // ← 再利用処理を渡す
+              onCopy={handleCopyCard}
               onTagClick={(t) => setActiveTag((prev) => (prev === t ? null : t))}
             />
             {expandedId === card.id && (
@@ -157,7 +223,7 @@ export default function Home() {
       <button
         type="button"
         onClick={() => {
-          setInitialFormData(null); // 新規作成時は空で開く
+          setInitialFormData(null);
           setFormOpen(true);
         }}
         className="tap-target fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-bold text-paper shadow-lg active:scale-95"
@@ -171,7 +237,7 @@ export default function Home() {
         <CardForm
           onClose={handleCloseForm}
           onSave={handleSaveCard}
-          initialData={initialFormData} // ← コピー対象のデータをフォームに渡す
+          initialData={initialFormData}
         />
       )}
     </main>
