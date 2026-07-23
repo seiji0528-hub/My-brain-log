@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { loadCards, saveCards, createCard, findRelatedCards } from "@/lib/storage";
+import { 
+  loadCards, 
+  saveCards, 
+  createCard, 
+  findRelatedCards, 
+  deleteCardFromSupabase // Step2: Supabaseからの削除関数をインポート
+} from "@/lib/storage";
 import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
 import SearchBar from "@/components/SearchBar";
@@ -62,10 +68,19 @@ export default function Home() {
     setExpandedId(newCardData.id);
   }
 
-  function handleDelete(id) {
-    // ※今回は画面上の削除表示のみ（次回削除用APIを繋ぎます）
-    setCards((prev) => prev.filter((c) => c.id !== id));
-    if (expandedId === id) setExpandedId(null);
+  // Step2: 削除処理（Supabaseから削除実行後にUIを更新）
+  async function handleDelete(id) {
+    try {
+      // 1. Supabaseから削除
+      await deleteCardFromSupabase(id);
+
+      // 2. 画面上のステートを更新
+      setCards((prev) => prev.filter((c) => c.id !== id));
+      if (expandedId === id) setExpandedId(null);
+    } catch (error) {
+      console.error("削除処理に失敗しました:", error);
+      alert("削除に失敗しました。もう一度お試しください。");
+    }
   }
 
   return (
