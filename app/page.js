@@ -15,31 +15,32 @@ export default function Home() {
   const [expandedId, setExpandedId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
 
+  // 初回読み込み：Supabaseからデータを取得
   useEffect(() => {
-    setCards(loadCards());
-    setLoaded(true);
+    async function fetchCards() {
+      const data = await loadCards();
+      setCards(data);
+      setLoaded(true);
+    }
+    fetchCards();
   }, []);
-
-  useEffect(() => {
-    if (loaded) saveCards(cards);
-  }, [cards, loaded]);
 
   const allTags = useMemo(() => {
     const set = new Set();
-    cards.forEach((c) => c.tags.forEach((t) => set.add(t)));
+    cards.forEach((c) => (c.tags || []).forEach((t) => set.add(t)));
     return Array.from(set);
   }, [cards]);
 
   const filteredCards = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cards
-      .filter((c) => (activeTag ? c.tags.includes(activeTag) : true))
+      .filter((c) => (activeTag ? (c.tags || []).includes(activeTag) : true))
       .filter((c) => {
         if (!q) return true;
         return (
           c.title.toLowerCase().includes(q) ||
           c.body.toLowerCase().includes(q) ||
-          c.tags.some((t) => t.toLowerCase().includes(q))
+          (c.tags || []).some((t) => t.toLowerCase().includes(q))
         );
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -48,14 +49,21 @@ export default function Home() {
   const expandedCard = cards.find((c) => c.id === expandedId) || null;
   const related = expandedCard ? findRelatedCards(expandedCard, cards) : [];
 
-  function handleSaveCard(data) {
-    const card = createCard(data);
-    setCards((prev) => [card, ...prev]);
+  // 保存処理：Supabaseへ追加し、画面のリストを更新
+  async function handleSaveCard(data) {
+    const newCardData = createCard(data);
+    await saveCards(newCardData);
+
+    // 最新のデータをSupabaseから再読み込みして画面に反映
+    const updatedCards = await loadCards();
+    setCards(updatedCards);
+
     setFormOpen(false);
-    setExpandedId(card.id);
+    setExpandedId(newCardData.id);
   }
 
   function handleDelete(id) {
+    // ※今回は画面上の削除表示のみ（次回削除用APIを繋ぎます）
     setCards((prev) => prev.filter((c) => c.id !== id));
     if (expandedId === id) setExpandedId(null);
   }
@@ -80,6 +88,12 @@ export default function Home() {
       />
 
       <section className="flex flex-1 flex-col gap-3 py-4">
+        {!loaded && (
+          <div className="mt-10 text-center text-xs text-ink-faint">
+            データを読み込み中...
+          </div>
+        )}
+
         {loaded && filteredCards.length === 0 && (
           <div className="mt-10 flex flex-col items-center gap-2 text-center">
             <p className="text-sm text-ink-faint">
