@@ -94,8 +94,11 @@ export default function Home() {
     setExpandedId(newCardData.id);
   }
 
-  // 削除処理
+  // 削除処理（確認ダイアログを追加）
   async function handleDelete(id) {
+    const confirmed = window.confirm("この思考カードを削除してもよろしいですか？");
+    if (!confirmed) return; // 「キャンセル」を押したらここでストップ
+
     try {
       await deleteCard(id);
       setCards((prev) => prev.filter((c) => c.id !== id));
