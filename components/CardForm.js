@@ -4,14 +4,19 @@ import { useState, useEffect } from "react";
 import { formatRawText } from "@/lib/aiClient";
 import { normalizeTags } from "@/lib/storage";
 
-export default function CardForm({ onClose, onSave, initialData = null }) {
+export default function CardForm({ onClose, onSave, initialData = null, allTags = [] }) {
   const [rawText, setRawText] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagsText, setTagsText] = useState("");
+  
+  // AIおすすめ機能用ステート
+  const [suggestedTitle, setSuggestedTitle] = useState("");
+  const [suggestedTags, setSuggestedTags] = useState([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  // 初期データがある場合は最初から review 画面にする
   const [step, setStep] = useState(initialData ? "review" : "raw");
 
   // 再利用（コピー）用データが渡された場合にフォームへセット
@@ -23,15 +28,18 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
     }
   }, [initialData]);
 
+  // AIで全体を整える処理
   async function handleFormat() {
     if (!rawText.trim()) return;
     setAiLoading(true);
     setAiError("");
     try {
-      const result = await formatRawText(rawText);
+      const result = await formatRawText(rawText, allTags);
       setTitle(result.title);
       setBody(result.body);
       setTagsText(result.tags.join(" "));
+      setSuggestedTitle(result.title);
+      setSuggestedTags(result.tags);
       setStep("review");
     } catch (e) {
       setAiError(e.message || "AI整形に失敗しました。手動で入力してください。");
@@ -42,15 +50,43 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
     }
   }
 
+  // AIを使わずに直接編集画面へ進む処理
   function handleSkipAi() {
     setBody(rawText);
     setStep("review");
+    // バックグラウンドで提案タイトル＆タグを生成
+    fetchSuggestions(rawText);
+  }
+
+  // 本文をもとにAIおすすめ提案だけを取得する
+  async function fetchSuggestions(textToAnalyze) {
+    if (!textToAnalyze || !textToAnalyze.trim()) return;
+    setSuggestLoading(true);
+    try {
+      const result = await formatRawText(textToAnalyze, allTags);
+      setSuggestedTitle(result.title);
+      setSuggestedTags(result.tags || []);
+    } catch (e) {
+      console.error("AI提案の取得に失敗しました:", e);
+    } finally {
+      setSuggestLoading(false);
+    }
+  }
+
+  // 提案タグのトグル（追加/削除）
+  function toggleSuggestedTag(tag) {
+    const currentTags = normalizeTags(tagsText);
+    if (currentTags.includes(tag)) {
+      setTagsText(currentTags.filter((t) => t !== tag).join(" "));
+    } else {
+      setTagsText([...currentTags, tag].join(" "));
+    }
   }
 
   function handleSave() {
     if (!title.trim() && !body.trim()) return;
     onSave({
-      title: title.trim() || "（無題の思考）",
+      title: title.trim() || suggestedTitle || "（無題の思考）",
       body: body.trim(),
       tags: normalizeTags(tagsText),
     });
@@ -95,18 +131,52 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
 
           {step === "review" && (
             <div className="flex flex-col gap-4">
+              {/* タイトル入力欄 */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-faint">
-                  タイトル
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-ink-faint">
+                    タイトル
+                  </label>
+                  {!suggestedTitle && !suggestLoading && body.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => fetchSuggestions(body)}
+                      className="text-xs text-accent hover:underline font-medium"
+                    >
+                      ✦ AIにタイトル案を聞く
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  placeholder={suggestedTitle ? `例: ${suggestedTitle}` : "タイトルを入力..."}
                   className="tap-target w-full rounded-card border border-line bg-paper-card px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
+
+                {/* AIおすすめタイトルのサジェスト表示 */}
+                {suggestLoading && (
+                  <p className="mt-1.5 text-xs text-ink-faint animate-pulse">
+                    ✦ AIがおすすめのタイトル・タグを考えています…
+                  </p>
+                )}
+                {!title && suggestedTitle && !suggestLoading && (
+                  <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-paper-card border border-line p-2 text-xs">
+                    <span className="text-accent font-bold shrink-0">💡 AI提案:</span>
+                    <span className="truncate text-ink font-medium">{suggestedTitle}</span>
+                    <button
+                      type="button"
+                      onClick={() => setTitle(suggestedTitle)}
+                      className="ml-auto shrink-0 rounded-md bg-accent px-2 py-1 text-xs font-bold text-paper active:scale-95 transition-transform"
+                    >
+                      採用する
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* 本文入力欄 */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-faint">
                   本文
@@ -114,11 +184,18 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
+                  onBlur={() => {
+                    // 本文からフォーカスが外れたタイミングで未生成なら提案取得
+                    if (!suggestedTitle && body.trim()) {
+                      fetchSuggestions(body);
+                    }
+                  }}
                   rows={4}
                   className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </div>
 
+              {/* タグ入力欄 */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-faint">
                   タグ（スペース区切り）
@@ -130,6 +207,32 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
                   placeholder="自分の性質 意思決定"
                   className="tap-target w-full rounded-card border border-line bg-paper-card px-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
+
+                {/* おすすめタグの候補一覧 */}
+                {suggestedTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-[11px] text-ink-faint mb-1">💡 おすすめのタグ（タップで追加/解除）:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestedTags.map((t) => {
+                        const isSelected = normalizeTags(tagsText).includes(t);
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => toggleSuggestedTag(t)}
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
+                              isSelected
+                                ? "bg-ink text-paper border-ink"
+                                : "bg-paper-card text-ink border-line hover:border-accent"
+                            }`}
+                          >
+                            #{t} {isSelected ? "✓" : "+"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -160,7 +263,6 @@ export default function CardForm({ onClose, onSave, initialData = null }) {
 
           {step === "review" && (
             <>
-              {/* 再利用時は「戻る」ボタンを非表示にする（raw画面に戻る必要がないため） */}
               {!initialData && (
                 <button
                   type="button"
