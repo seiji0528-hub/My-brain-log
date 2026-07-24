@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { 
   loadCards, 
   saveCards, 
@@ -12,6 +12,7 @@ import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
 import SearchBar from "@/components/SearchBar";
 import CardForm from "@/components/CardForm";
+import BackPageGate from "@/components/BackPageGate";
 
 // 1桁のパスワード（ここを好きな数字に変えてもOK）
 const PASSCODE = "0";
@@ -28,6 +29,8 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passInput, setPassInput] = useState("");
   const [passError, setPassError] = useState(false);
+
+  const logoRef = useRef(null);
 
   useEffect(() => {
     const authStatus = localStorage.getItem("app_authenticated");
@@ -157,7 +160,10 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col px-4">
       <header className="pt-5 pb-1">
-        <h1 className="font-display text-xl font-bold tracking-tight text-ink">
+        <h1
+          ref={logoRef}
+          className="font-display text-xl font-bold tracking-tight text-ink"
+        >
           My Brain Log
         </h1>
         <p className="mt-0.5 text-xs text-ink-faint">
@@ -235,6 +241,8 @@ export default function Home() {
           allTags={allTags}
         />
       )}
+
+      <BackPageGate triggerRef={logoRef} cards={cards} />
     </main>
   );
 }
