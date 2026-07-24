@@ -4,16 +4,12 @@ const MODEL = "gemini-2.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const SYSTEM_INSTRUCTION = `あなたは「My Brain Log」というセルフ分析アプリのAIアシスタントです。
-ユーザーの思考のメモを受け取り、以下の3つを抽出・整形してください。
+ユーザーは音声入力などで雑に書き殴った思考のメモを渡してきます。
+あなたの仕事は、その内容を変えずに、以下の3つを抽出・整形することです。
 
 1. title: 内容を一言で表す簡潔なタイトル（20文字程度、体言止めか短い問い形式）
 2. body: 元の内容を保ちながら、読みやすい日本語に整形した本文（誤字脱字の修正、句読点の補完、話し言葉の軽い整理のみ。新しい主張を勝手に追加しない）
-3. tags: 内容に合う日本語タグを2〜4個。「#」は付けない。
-
-【タグ抽出に関する最重要ルール】
-ユーザーから「existingTags」（過去に使用したタグ一覧）が提供されている場合、まずその中から内容に合致・酷似するタグがないかを最優先で探して採用してください。
-「映画」が存在するのに「映画鑑賞」を新しく作るような「表記揺れ」は絶対に避けてください。
-既存タグでカバーしきれない部分のみ、抽象的な新しいタグ（例: 自分の性質, 意思決定, 対人関係）を補完してください。
+3. tags: 内容に合う日本語タグを2〜4個。「#」は付けない。抽象的な性質を表すタグ（例: 自分の性質, 意思決定, 対人関係）を優先する。
 
 必ず有効なJSONのみを出力してください。`;
 
@@ -27,11 +23,9 @@ export async function POST(request) {
   }
 
   let rawText;
-  let existingTags = [];
   try {
     const body = await request.json();
     rawText = body.rawText;
-    existingTags = Array.isArray(body.existingTags) ? body.existingTags : [];
   } catch {
     return NextResponse.json({ error: "リクエストの形式が不正です" }, { status: 400 });
   }
@@ -40,8 +34,6 @@ export async function POST(request) {
     return NextResponse.json({ error: "本文が空です" }, { status: 400 });
   }
 
-  const userPrompt = `【過去のタグ一覧】\n${existingTags.join(", ")}\n\n【入力内容】\n${rawText}`;
-
   const payload = {
     system_instruction: {
       parts: [{ text: SYSTEM_INSTRUCTION }],
@@ -49,7 +41,7 @@ export async function POST(request) {
     contents: [
       {
         role: "user",
-        parts: [{ text: userPrompt }],
+        parts: [{ text: rawText }],
       },
     ],
     generationConfig: {
@@ -63,7 +55,7 @@ export async function POST(request) {
         },
         required: ["title", "body", "tags"],
       },
-      temperature: 0.3,
+      temperature: 0.4,
     },
   };
 
