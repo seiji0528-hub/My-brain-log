@@ -14,7 +14,8 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
   // 初期データがある場合は最初から review 画面にする
   const [step, setStep] = useState(initialData ? "review" : "raw");
 
-  // タイトル案（写真のボタン）用のステート
+  // タイトル案（候補として表示し、タップした時だけ反映）用のステート
+  const [titleSuggestion, setTitleSuggestion] = useState("");
   const [titleSuggestLoading, setTitleSuggestLoading] = useState(false);
   const [titleSuggestError, setTitleSuggestError] = useState("");
 
@@ -22,6 +23,7 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
   const [tagSuggestLoading, setTagSuggestLoading] = useState(false);
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [tagSuggestChecked, setTagSuggestChecked] = useState(false);
+  const [tagSuggestError, setTagSuggestError] = useState("");
 
   // 再利用（コピー）用データが渡された場合にフォームへセット
   useEffect(() => {
@@ -32,13 +34,13 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
     }
   }, [initialData]);
 
+  // 「✦ AIで整える」：本文の整形とタグの下書きだけ行う。タイトルは自動で入れない
   async function handleFormat() {
     if (!rawText.trim()) return;
     setAiLoading(true);
     setAiError("");
     try {
       const result = await formatRawText(rawText);
-      setTitle(result.title);
       setBody(result.body);
       setTagsText(result.tags.join(" "));
       setStep("review");
@@ -56,14 +58,15 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
     setStep("review");
   }
 
-  // 「✦ AIにタイトル案を聞く」：タップするたびに、その時点の本文で毎回聞き直す
+  // 「✦ AIにタイトル案を聞く」：タップするたびに、その時点の本文で毎回聞き直す。
+  // 直接タイトル欄には入れず、候補として保持するだけ。
   async function handleSuggestTitle() {
     if (!body.trim()) return;
     setTitleSuggestLoading(true);
     setTitleSuggestError("");
     try {
       const t = await suggestTitle(body);
-      if (t) setTitle(t);
+      setTitleSuggestion(t || "");
     } catch (e) {
       setTitleSuggestError(e.message || "タイトル案の取得に失敗しました");
     } finally {
@@ -71,11 +74,19 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
     }
   }
 
+  // 候補チップをタップした時だけ、実際にタイトル欄へ反映する
+  function applyTitleSuggestion() {
+    if (!titleSuggestion) return;
+    setTitle(titleSuggestion);
+    setTitleSuggestion("");
+  }
+
   // 「✦ 近い過去タグを探す」：本文と過去タグ一覧から近いものだけ拾う
   async function handleSuggestTags() {
     if (!body.trim()) return;
     setTagSuggestLoading(true);
     setTagSuggestChecked(false);
+    setTagSuggestError("");
     try {
       const tags = await suggestTags(body, allTags);
       setSuggestedTags(tags);
@@ -83,7 +94,7 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
     } catch (e) {
       console.error("タグ候補の取得に失敗しました:", e);
       setSuggestedTags([]);
-      setTagSuggestChecked(true);
+      setTagSuggestError(e.message || "タグ候補の取得に失敗しました");
     } finally {
       setTagSuggestLoading(false);
     }
@@ -168,8 +179,24 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
                   placeholder="タイトルを入力..."
                   className="tap-target w-full rounded-card border border-line bg-paper-card px-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
+
                 {titleSuggestError && (
                   <p className="mt-1 text-xs text-[#93445A]">{titleSuggestError}</p>
+                )}
+
+                {/* AI提案は候補として表示。タップした時だけ反映する */}
+                {titleSuggestion && (
+                  <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-line bg-paper-card p-2 text-xs">
+                    <span className="shrink-0 font-bold text-accent">💡 AI提案:</span>
+                    <span className="truncate font-medium text-ink">{titleSuggestion}</span>
+                    <button
+                      type="button"
+                      onClick={applyTitleSuggestion}
+                      className="ml-auto shrink-0 rounded-md bg-accent px-2 py-1 text-xs font-bold text-paper active:scale-95"
+                    >
+                      採用する
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -231,7 +258,10 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
                   </div>
                 )}
 
-                {tagSuggestChecked && suggestedTags.length === 0 && (
+                {tagSuggestError && (
+                  <p className="mt-1.5 text-xs text-[#93445A]">{tagSuggestError}</p>
+                )}
+                {!tagSuggestError && tagSuggestChecked && suggestedTags.length === 0 && (
                   <p className="mt-1.5 text-xs text-ink-faint">
                     近い過去タグは見つかりませんでした
                   </p>
