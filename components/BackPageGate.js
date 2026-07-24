@@ -4,20 +4,6 @@ import { useEffect, useRef } from "react";
 
 /**
  * 裏ページ全体(霞+扉のゲート → 夜の海岸シーン)を管理するコンポーネント。
- *
- * Home側の使い方:
- *
- *   const logoRef = useRef(null);
- *   ...
- *   <h1 ref={logoRef} className="...">My Brain Log</h1>
- *   ...
- *   <BackPageGate triggerRef={logoRef} cards={cards} />
- *
- * - triggerRef(表側のロゴ要素)のクリックを検知し、内部で
- *   霞→扉→円判定→夜景まで完結する。Home側のロジックには手を加えない。
- * - cards には lib/storage.js の loadCards() が返す配列をそのまま渡せばよい。
- *   「過去の投稿ランダム表示」は cards から、「歌詞演出」は tags に
- *   "歌詞" を含む cards から抽出する。
  */
 export default function BackPageGate({ triggerRef, cards = [] }) {
   const doorLayerRef = useRef(null);
@@ -29,6 +15,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const astroPanelRef = useRef(null);
   const constellationPanelRef = useRef(null);
   const exitBtnRef = useRef(null);
+  const sceneDisposeRef = useRef(null); // 夜景シーンの後始末関数(遅延生成のため保持)
 
   useEffect(() => {
     if (!triggerRef?.current) return;
@@ -59,6 +46,27 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     const exitBtn = exitBtnRef.current;
     const trailSvg = trailSvgRef.current;
     let state = "front";
+
+    // 扉が開くたびに夜景を最新状態で組み立て直す(日付・投稿・歌詞を毎回フレッシュに)
+    function rebuildScene() {
+      if (sceneDisposeRef.current) {
+        sceneDisposeRef.current();
+        sceneDisposeRef.current = null;
+      }
+      try {
+        sceneDisposeRef.current = buildScene({
+          sceneEl: sceneRef.current,
+          infoEl: infoRef.current,
+          astroPanelEl: astroPanelRef.current,
+          constellationPanelEl: constellationPanelRef.current,
+          randomPost: pickRandomPost(cards),
+          lyricPool: extractLyrics(cards),
+        });
+      } catch (err) {
+        // ここでエラーが出る場合、夜景の中身が生成できていない可能性が高い
+        console.error("[BackPageGate] 夜景シーンの構築に失敗しました:", err);
+      }
+    }
 
     function onTriggerClick(e) {
       if (state !== "front") return;
@@ -115,6 +123,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     }
     function onDown(e) {
       if (state !== "door") return;
+      if (e.cancelable) e.preventDefault(); // スマホでの意図しないスクロールを防止
       drawing = true;
       points = [];
       points.push(pointerPos(e));
@@ -122,6 +131,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     }
     function onMove(e) {
       if (!drawing) return;
+      if (e.cancelable) e.preventDefault(); // スマホでの意図しないスクロールを防止
       points.push(pointerPos(e));
       updateTrail();
     }
@@ -129,13 +139,14 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       if (!drawing) return;
       drawing = false;
       if (detectCircle(points)) {
+        // 成功時: 軌跡はここでは消さず、openDoor() 内で扉と同じタイミング/消え方でフェードさせる
         openDoor();
       } else {
         doorHint.classList.remove("shake");
         void doorHint.offsetWidth;
         doorHint.classList.add("shake");
+        setTimeout(clearTrail, 220);
       }
-      setTimeout(clearTrail, 220);
     }
     function detectCircle(pts) {
       if (pts.length < 12) return false;
@@ -176,8 +187,8 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     doorLayer.addEventListener("mousedown", onDown);
     doorLayer.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
-    doorLayer.addEventListener("touchstart", onDown, { passive: true });
-    doorLayer.addEventListener("touchmove", onMove, { passive: true });
+    doorLayer.addEventListener("touchstart", onDown, { passive: false });
+    doorLayer.addEventListener("touchmove", onMove, { passive: false });
     window.addEventListener("touchend", onUp);
     cleanupFns.push(() => {
       doorLayer.removeEventListener("mousedown", onDown);
@@ -193,10 +204,26 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       doorLayer.classList.add("opening");
       doorHint.style.transition = "opacity 0.4s ease";
       doorHint.style.opacity = "0";
+
+      // 夜景を最新の状態で組み立てる(扉が開くこのタイミングで初めて生成)
+      rebuildScene();
+
       setTimeout(() => {
         back.classList.add("show");
         setTimeout(() => {
           doorLayer.classList.remove("show");
+
+          // 軌跡を、扉と全く同じ「opacity 1.6s ease」で消す
+          if (trailSvg) {
+            trailSvg.style.transition = "opacity 1.6s ease";
+            trailSvg.style.opacity = "0";
+            setTimeout(() => {
+              clearTrail();
+              trailSvg.style.transition = "";
+              trailSvg.style.opacity = "1";
+            }, 1600);
+          }
+
           setTimeout(() => {
             doorLayer.classList.remove("opening");
             exitBtn.style.opacity = "1";
@@ -214,23 +241,23 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
         doorLayer.style.clipPath = "circle(0px at 50px 40px)";
         doorHint.style.opacity = "1";
         state = "front";
+        // 裏ページを閉じたら夜景のアニメーションも停止しておく
+        if (sceneDisposeRef.current) {
+          sceneDisposeRef.current();
+          sceneDisposeRef.current = null;
+        }
       }, 500);
     }
     exitBtn.addEventListener("click", onExitClick);
     cleanupFns.push(() => exitBtn.removeEventListener("click", onExitClick));
 
-    // ============================================================
-    // ② 夜の海岸シーン一式(決定版ロジック)
-    // ============================================================
-    const disposeScene = buildScene({
-      sceneEl: sceneRef.current,
-      infoEl: infoRef.current,
-      astroPanelEl: astroPanelRef.current,
-      constellationPanelEl: constellationPanelRef.current,
-      randomPost: pickRandomPost(cards),
-      lyricPool: extractLyrics(cards),
+    // マウント時には夜景を作らない(遅延生成。③のチラつき対策)
+    cleanupFns.push(() => {
+      if (sceneDisposeRef.current) {
+        sceneDisposeRef.current();
+        sceneDisposeRef.current = null;
+      }
     });
-    cleanupFns.push(disposeScene);
 
     return () => cleanupFns.forEach((fn) => fn());
   }, [triggerRef, cards]);
@@ -318,6 +345,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           transition: clip-path 0.95s cubic-bezier(0.22, 0.7, 0.3, 1), opacity 1.6s ease;
           opacity: 0;
           pointer-events: none;
+          touch-action: none; /* スマホで丸を描く際にページがスクロールしないように */
         }
         .bpg-door-layer.show {
           opacity: 1;
@@ -363,8 +391,8 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           position: absolute;
           left: 50%;
           top: 50%;
-          width: 220px;
-          height: 320px;
+          width: 88px;
+          height: 128px;
           transform: translate(-50%, -56%);
         }
         .bpg-trail {
@@ -543,9 +571,10 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
 }
 
 // ==================================================================
-// シーン構築(決定版ロジック。プロトタイプの back_page_scene_v9 相当)
+// シーン構築(決定版ロジック。ここは変更していません)
 // ==================================================================
 function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, randomPost, lyricPool }) {
+
   const svgns = "http://www.w3.org/2000/svg";
   const scene = sceneEl;
   const info = infoEl;
