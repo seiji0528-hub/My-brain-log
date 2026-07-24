@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * 裏ページ全体(霞+扉のゲート → 夜の海岸シーン)を管理するコンポーネント。
@@ -13,11 +13,11 @@ import { useEffect, useRef } from "react";
  *   ...
  *   <BackPageGate triggerRef={logoRef} cards={cards} />
  *
- * - triggerRef(表側のロゴ要素)のクリックを検知し、内部で
- *   霞→扉→円判定→夜景まで完結する。Home側のロジックには手を加えない。
- * - cards には lib/storage.js の loadCards() が返す配列をそのまま渡せばよい。
- *   「過去の投稿ランダム表示」は cards から、「歌詞演出」は tags に
- *   "歌詞" を含む cards から抽出する。
+ * 表示/非表示はReactのstateで管理している(opacityをJSX側で計算する)。
+ * DOMのclassName/styleを直接書き換えるだけだと、Home側が何らかの理由で
+ * 再描画された瞬間にReactがJSXの値へ強制的に巻き戻してしまうため、
+ * 「扉は消えるのに夜景が出てこない」といった非対称なバグの元になる。
+ * state駆動にすることで、再描画されても常に正しい表示状態が保たれる。
  */
 export default function BackPageGate({ triggerRef, cards = [] }) {
   const doorLayerRef = useRef(null);
@@ -28,11 +28,19 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const infoRef = useRef(null);
   const astroPanelRef = useRef(null);
   const constellationPanelRef = useRef(null);
-  const exitBtnRef = useRef(null);
+  const exitClickHandlerRef = useRef(() => {});
+
+  // 表示状態はすべてReact stateで持つ(DOMを直接いじって終わりにしない)
+  const [doorShown, setDoorShown] = useState(false);
+  const [doorOpening, setDoorOpening] = useState(false);
+  const [doorHintShown, setDoorHintShown] = useState(true);
+  const [backShown, setBackShown] = useState(false);
+  const [exitBtnShown, setExitBtnShown] = useState(false);
 
   useEffect(() => {
     if (!triggerRef?.current) return;
     const cleanupFns = [];
+    const timeoutIds = [];
 
     // ============================================================
     // 実データの準備(表の投稿から抽出)
@@ -54,15 +62,15 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     // ① 扉ゲート(霞+扉+フリーハンド円判定)
     // ============================================================
     const doorLayer = doorLayerRef.current;
-    const doorHint = doorHintRef.current;
     const back = backRef.current;
-    const exitBtn = exitBtnRef.current;
     const trailSvg = trailSvgRef.current;
-    let state = "front";
+    // interactionState は「今どの段階か」を判定するためだけの内部フラグ。
+    // 実際の見た目(opacity等)は上のReact stateが担当する。
+    let interactionState = "front";
 
     function onTriggerClick(e) {
-      if (state !== "front") return;
-      state = "door";
+      if (interactionState !== "front") return;
+      interactionState = "door";
       const ox = e.clientX;
       const oy = e.clientY;
       const maxR =
@@ -70,11 +78,9 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           Math.max(ox, window.innerWidth - ox),
           Math.max(oy, window.innerHeight - oy)
         ) * 1.15;
+      // clip-pathはReactのstyle管理下に置いていないので、直接操作してよい
       doorLayer.style.clipPath = `circle(0px at ${ox}px ${oy}px)`;
-      // クラスだけでなく直接styleでも確実に表示する(外部CSSの読み込みタイミングに依存しない)
-      doorLayer.style.opacity = "1";
-      doorLayer.style.pointerEvents = "all";
-      doorLayer.classList.add("show");
+      setDoorShown(true);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           doorLayer.style.clipPath = `circle(${maxR}px at ${ox}px ${oy}px)`;
@@ -117,7 +123,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       return { x: e.clientX, y: e.clientY };
     }
     function onDown(e) {
-      if (state !== "door") return;
+      if (interactionState !== "door") return;
       if (e.cancelable) e.preventDefault(); // スマホでのスクロール/ズームジェスチャーと競合させない
       drawing = true;
       points = [];
@@ -137,10 +143,13 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
         openDoor();
         // トレイルはここではクリアしない。扉と同じタイミング・同じ消え方で一緒にフェードアウトさせる
       } else {
-        doorHint.classList.remove("shake");
-        void doorHint.offsetWidth;
-        doorHint.classList.add("shake");
-        setTimeout(clearTrail, 220);
+        const hint = doorHintRef.current;
+        if (hint) {
+          hint.classList.remove("shake");
+          void hint.offsetWidth;
+          hint.classList.add("shake");
+        }
+        timeoutIds.push(setTimeout(clearTrail, 220));
       }
     }
     function detectCircle(pts) {
@@ -172,7 +181,6 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
 
       const start = pts[0],
         end = pts[pts.length - 1];
-      // 判定を少しゆるめ、指での雑な円でも認識しやすくする
       const closeLoop = Math.hypot(end.x - start.x, end.y - start.y) < avgR * 1.15;
       const sweptEnough = Math.abs(totalAngle) > Math.PI * 1.15; // 約207°以上でOK
       const roundEnough = avgR > 14 && radiusVariance < avgR * 0.7;
@@ -197,44 +205,44 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     });
 
     function openDoor() {
-      state = "opening";
-      doorLayer.classList.add("opening");
-      doorHint.style.transition = "opacity 0.4s ease";
-      doorHint.style.opacity = "0";
-      setTimeout(() => {
-        // 直接styleで確実に夜景を表示する
-        back.style.opacity = "1";
-        back.style.pointerEvents = "all";
-        back.classList.add("show");
+      interactionState = "opening";
+      setDoorOpening(true);
+      setDoorHintShown(false);
+      timeoutIds.push(
         setTimeout(() => {
-          // 扉(と、その中にあるトレイルの軌跡)を同じタイミング・同じ消え方でフェードアウト
-          doorLayer.style.opacity = "0";
-          doorLayer.style.pointerEvents = "none";
-          doorLayer.classList.remove("show");
-          setTimeout(() => {
-            doorLayer.classList.remove("opening");
-            clearTrail();
-            exitBtn.style.opacity = "1";
-            state = "back";
-          }, 1600);
-        }, 400);
-      }, 500);
+          setBackShown(true);
+          timeoutIds.push(
+            setTimeout(() => {
+              // 扉(と、その中にあるトレイルの軌跡)を同じタイミング・同じ消え方でフェードアウト
+              setDoorShown(false);
+              timeoutIds.push(
+                setTimeout(() => {
+                  setDoorOpening(false);
+                  clearTrail();
+                  setExitBtnShown(true);
+                  interactionState = "back";
+                }, 1600)
+              );
+            }, 400)
+          );
+        }, 500)
+      );
     }
 
     function onExitClick() {
-      exitBtn.style.opacity = "0";
-      back.style.opacity = "0";
-      back.style.pointerEvents = "none";
-      back.classList.remove("show");
-      setTimeout(() => {
-        doorLayer.classList.remove("opening");
-        doorLayer.style.clipPath = "circle(0px at 50px 40px)";
-        doorHint.style.opacity = "1";
-        state = "front";
-      }, 500);
+      setExitBtnShown(false);
+      setBackShown(false);
+      timeoutIds.push(
+        setTimeout(() => {
+          setDoorOpening(false);
+          if (doorLayer) doorLayer.style.clipPath = "circle(0px at 50px 40px)";
+          setDoorHintShown(true);
+          interactionState = "front";
+        }, 500)
+      );
     }
-    exitBtn.addEventListener("click", onExitClick);
-    cleanupFns.push(() => exitBtn.removeEventListener("click", onExitClick));
+    // exitBtnはReactの<button onClick>で扱うので、ここではonExitClickを外に出す
+    exitClickHandlerRef.current = onExitClick;
 
     // ============================================================
     // ② 夜の海岸シーン一式(決定版ロジック)
@@ -249,15 +257,24 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     });
     cleanupFns.push(disposeScene);
 
-    return () => cleanupFns.forEach((fn) => fn());
+    return () => {
+      timeoutIds.forEach((id) => clearTimeout(id));
+      cleanupFns.forEach((fn) => fn());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerRef, cards]);
+
+  // onExitClickはuseEffect内で定義されるため、refを介してボタンのonClickから呼び出す
 
   return (
     <>
       <div
         ref={doorLayerRef}
-        className="bpg-door-layer"
-        style={{ opacity: 0, pointerEvents: "none" }}
+        className={`bpg-door-layer${doorOpening ? " opening" : ""}`}
+        style={{
+          opacity: doorShown ? 1 : 0,
+          pointerEvents: doorShown ? "all" : "none",
+        }}
       >
         <svg className="bpg-door-svg" viewBox="0 0 220 320">
           <defs>
@@ -305,7 +322,11 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
             <circle cx="122" cy="175" r="3" fill="#C9A96A" />
           </g>
         </svg>
-        <div ref={doorHintRef} className="bpg-door-hint">
+        <div
+          ref={doorHintRef}
+          className="bpg-door-hint"
+          style={{ opacity: doorHintShown ? 1 : 0, transition: "opacity 0.4s ease" }}
+        >
           指でそっと、円を描いてください
         </div>
         <svg ref={trailSvgRef} className="bpg-trail" />
@@ -314,7 +335,10 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       <div
         ref={backRef}
         className="bpg-back"
-        style={{ opacity: 0, pointerEvents: "none" }}
+        style={{
+          opacity: backShown ? 1 : 0,
+          pointerEvents: backShown ? "all" : "none",
+        }}
       >
         <div className="bpg-stage">
           <svg ref={sceneRef} viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" />
@@ -322,7 +346,12 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
         <div ref={infoRef} className="bpg-info" />
         <div ref={astroPanelRef} className="bpg-astro-panel" />
         <div ref={constellationPanelRef} className="bpg-constellation-panel" />
-        <button ref={exitBtnRef} type="button" className="bpg-exit">
+        <button
+          type="button"
+          className="bpg-exit"
+          style={{ opacity: exitBtnShown ? 1 : 0 }}
+          onClick={() => exitClickHandlerRef.current?.()}
+        >
           表のページに戻る
         </button>
       </div>
@@ -341,12 +370,6 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           );
           clip-path: circle(0px at 50px 40px);
           transition: clip-path 0.95s cubic-bezier(0.22, 0.7, 0.3, 1), opacity 1.6s ease;
-          opacity: 0;
-          pointer-events: none;
-        }
-        .bpg-door-layer.show {
-          opacity: 1;
-          pointer-events: all;
         }
         .bpg-door-layer::before {
           content: "";
@@ -420,14 +443,8 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           position: fixed;
           inset: 0;
           z-index: 40;
-          opacity: 0;
           transition: opacity 1.1s ease;
-          pointer-events: none;
           background: #000;
-        }
-        .bpg-back.show {
-          opacity: 1;
-          pointer-events: all;
         }
         .bpg-stage {
           width: 100%;
@@ -517,7 +534,6 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           border-radius: 999px;
           background: rgba(0, 0, 0, 0.3);
           cursor: pointer;
-          opacity: 0;
           transition: opacity 0.5s ease;
         }
 
