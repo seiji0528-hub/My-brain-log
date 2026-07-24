@@ -25,12 +25,10 @@ export default function Home() {
   const [formOpen, setFormOpen] = useState(false);
   const [initialFormData, setInitialFormData] = useState(null);
 
-  // パスコード認証関連のステート
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passInput, setPassInput] = useState("");
   const [passError, setPassError] = useState(false);
 
-  // 初回起動時のチェック：すでに認証済みか確認 ＆ Supabaseからデータを取得
   useEffect(() => {
     const authStatus = localStorage.getItem("app_authenticated");
     if (authStatus === "true") {
@@ -45,7 +43,6 @@ export default function Home() {
     fetchCards();
   }, []);
 
-  // パスコード送信処理
   function handlePassSubmit(e) {
     e.preventDefault();
     if (passInput === PASSCODE) {
@@ -81,7 +78,6 @@ export default function Home() {
   const expandedCard = cards.find((c) => c.id === expandedId) || null;
   const related = expandedCard ? findRelatedCards(expandedCard, cards) : [];
 
-  // 保存処理
   async function handleSaveCard(data) {
     const newCardData = createCard(data);
     await saveCards(newCardData);
@@ -94,10 +90,9 @@ export default function Home() {
     setExpandedId(newCardData.id);
   }
 
-  // 削除処理（確認ダイアログを追加）
   async function handleDelete(id) {
     const confirmed = window.confirm("この思考カードを削除してもよろしいですか？");
-    if (!confirmed) return; // 「キャンセル」を押したらここでストップ
+    if (!confirmed) return;
 
     try {
       await deleteCard(id);
@@ -109,19 +104,16 @@ export default function Home() {
     }
   }
 
-  // 再利用（コピー）ボタンが押された時の処理
   function handleCopyCard(card) {
     setInitialFormData(card);
     setFormOpen(true);
   }
 
-  // フォームを閉じる処理
   function handleCloseForm() {
     setFormOpen(false);
     setInitialFormData(null);
   }
 
-  // --- 未認証時のロック画面 ---
   if (!isAuthenticated) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center px-6">
@@ -162,7 +154,6 @@ export default function Home() {
     );
   }
 
-  // --- 認証済みのメイン画面 ---
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col px-4">
       <header className="pt-5 pb-1">
@@ -241,6 +232,7 @@ export default function Home() {
           onClose={handleCloseForm}
           onSave={handleSaveCard}
           initialData={initialFormData}
+          allTags={allTags}
         />
       )}
     </main>
