@@ -20,7 +20,8 @@ export default function SearchBar({ query, onQueryChange, allTags, activeTag, on
       </div>
 
       {allTags.length > 0 && (
-        <div className="mt-2.5 flex gap-1.5 overflow-x-auto pb-0.5">
+        /* gap-2 と no-scrollbar、py-1 を追加してキレイに並べます */
+        <div className="mt-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
           {allTags.map((t) => (
             <TagChip
               key={t}
