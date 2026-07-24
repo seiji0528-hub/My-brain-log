@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-flash-latest";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const SYSTEM_INSTRUCTION = `あなたは「My Brain Log」というセルフ分析アプリのAIアシスタントです。
