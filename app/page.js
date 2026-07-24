@@ -241,6 +241,7 @@ export default function Home() {
           onClose={handleCloseForm}
           onSave={handleSaveCard}
           initialData={initialFormData}
+            allTags={tallTags}//
         />
       )}
     </main>
