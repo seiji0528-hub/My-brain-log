@@ -191,16 +191,12 @@
   filter: drop-shadow(0 0 4px rgba(201, 169, 106, 0.35));
 }
 .bpg-exit {
-  position: relative;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #c9a96a;
-  border: 1px solid rgba(201, 169, 106, 0.35);
-  padding: 9px 18px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.3);
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  transition: opacity 0.5s ease;
+  padding: 0;
 }
 
 .twinkle {
