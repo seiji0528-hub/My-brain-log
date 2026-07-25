@@ -164,11 +164,34 @@
   color: rgba(201, 169, 106, 0.9);
   margin-bottom: 6px;
 }
-.bpg-exit {
+.bpg-exit-wrap {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 6px;
+  right: 6px;
+  width: 200px;
+  height: 84px;
   z-index: 41;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease;
+}
+.bpg-signature {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bpg-signature path {
+  fill: none;
+  stroke: #c9a96a;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 4px rgba(201, 169, 106, 0.35));
+}
+.bpg-exit {
+  position: relative;
   font-size: 12px;
   letter-spacing: 0.08em;
   color: #c9a96a;
