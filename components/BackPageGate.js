@@ -32,6 +32,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const exitClickHandlerRef = useRef(() => {});
   const signatureSvgRef = useRef(null);
   const lastPointsRef = useRef([]);
+  const moonClickHandlerRef = useRef(() => {});
 
   // 表示状態はすべてReact stateで持つ(DOMを直接いじって終わりにしない)
   const [doorShown, setDoorShown] = useState(false);
@@ -39,6 +40,47 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const [doorHintShown, setDoorHintShown] = useState(true);
   const [backShown, setBackShown] = useState(false);
   const [exitBtnShown, setExitBtnShown] = useState(false);
+  // 映画レコメンド: idle | loading | done | error
+  const [movieState, setMovieState] = useState({ status: "idle", data: null, error: null });
+
+  async function handleMoonClick() {
+    if (movieState.status === "loading") return;
+    setMovieState({ status: "loading", data: null, error: null });
+    try {
+      let history = [];
+      try {
+        const raw = window.localStorage.getItem("bpg_movie_history");
+        history = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        history = [];
+      }
+      const res = await fetch("/api/movie-recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ history }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "レコメンドに失敗しました");
+      setMovieState({ status: "done", data, error: null });
+      try {
+        const nextHistory = [...history, data.title].slice(-30);
+        window.localStorage.setItem("bpg_movie_history", JSON.stringify(nextHistory));
+      } catch (e) {
+        // localStorageが使えなくても致命的ではないので無視
+      }
+    } catch (err) {
+      setMovieState({ status: "error", data: null, error: err.message || "エラーが発生しました" });
+    }
+  }
+
+  // moonClickHandlerRefを常に最新のhandleMoonClickに保つ(effect内の古いクロージャから安全に呼べるように)
+  useEffect(() => {
+    moonClickHandlerRef.current = handleMoonClick;
+  });
+
+  function closeMoviePanel() {
+    setMovieState({ status: "idle", data: null, error: null });
+  }
 
   useEffect(() => {
     if (!triggerRef?.current) {
@@ -323,6 +365,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
         constellationPanelEl: constellationPanelRef.current,
         randomPost: pickRandomPost(cards),
         lyricPool: extractLyrics(cards),
+        onMoonTap: () => moonClickHandlerRef.current(),
       });
       console.log("[BackPageGate] buildScene 完了");
     } catch (err) {
@@ -431,6 +474,47 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
             onClick={() => exitClickHandlerRef.current?.()}
           />
         </div>
+
+        <div
+          className="bpg-movie-panel"
+          style={{
+            opacity: movieState.status === "idle" ? 0 : 1,
+            pointerEvents: movieState.status === "idle" ? "none" : "auto",
+          }}
+          onClick={closeMoviePanel}
+        >
+          <div className="bpg-movie-card" onClick={(e) => e.stopPropagation()}>
+            {movieState.status === "loading" && (
+              <div className="bpg-movie-loading">
+                <div className="bpg-movie-loading-moon" />
+                <p>月あかりの下で、今夜の一本を選んでいます…</p>
+              </div>
+            )}
+            {movieState.status === "error" && (
+              <div>
+                <p className="bpg-movie-error">うまく選べませんでした。もう一度、月を押してみてください。</p>
+                <button type="button" className="bpg-movie-close" onClick={closeMoviePanel}>
+                  閉じる
+                </button>
+              </div>
+            )}
+            {movieState.status === "done" && movieState.data && (
+              <div>
+                <p className="bpg-movie-title">
+                  {movieState.data.title}
+                  {movieState.data.year ? `(${movieState.data.year})` : ""}
+                </p>
+                {Array.isArray(movieState.data.cast) && movieState.data.cast.length > 0 && (
+                  <p className="bpg-movie-cast">{movieState.data.cast.join(" / ")}</p>
+                )}
+                <p className="bpg-movie-summary">{movieState.data.summary}</p>
+                <button type="button" className="bpg-movie-close" onClick={closeMoviePanel}>
+                  閉じる
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -439,7 +523,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
 // ==================================================================
 // シーン構築(決定版ロジック。プロトタイプの back_page_scene_v9 相当)
 // ==================================================================
-function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, randomPost, lyricPool }) {
+function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, randomPost, lyricPool, onMoonTap }) {
   const svgns = "http://www.w3.org/2000/svg";
   const scene = sceneEl;
   const info = infoEl;
@@ -750,12 +834,11 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
     scene.appendChild(craters);
   }
 
-  // 月の当たり判定(映画レコメンド機能のプレースホルダー。輪郭よりわずかに大きい程度)
+  // 月の当たり判定(映画レコメンド機能。輪郭よりわずかに大きい程度)
   const moonHit = el("circle", { cx: moonCx, cy: moonCy, r: moonR + 4, fill: "transparent", style: "cursor:pointer;" });
   scene.appendChild(moonHit);
   function onMoonClick() {
-    // TODO: 映画レコメンド機能(Gemini API連携)をここに実装する
-    console.log("月がタップされました(映画レコメンド機能は未実装)");
+    onMoonTap && onMoonTap();
   }
   moonHit.addEventListener("click", onMoonClick);
 
