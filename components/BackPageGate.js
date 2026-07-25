@@ -30,6 +30,8 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const astroPanelRef = useRef(null);
   const constellationPanelRef = useRef(null);
   const exitClickHandlerRef = useRef(() => {});
+  const signatureSvgRef = useRef(null);
+  const lastPointsRef = useRef([]);
 
   // 表示状態はすべてReact stateで持つ(DOMを直接いじって終わりにしない)
   const [doorShown, setDoorShown] = useState(false);
@@ -149,6 +151,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       const isCircle = detectCircle(points);
       console.log("[BackPageGate] 描画終了。点の数:", points.length, "円と判定:", isCircle);
       if (isCircle) {
+        lastPointsRef.current = points.slice();
         openDoor();
         // トレイルはここではクリアしない。扉と同じタイミング・同じ消え方で一緒にフェードアウトさせる
       } else {
@@ -213,6 +216,55 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
       window.removeEventListener("touchend", onUp);
     });
 
+    // 描いた円の軌跡を、目標サイズにきれいに整形して座標変換する
+    // (hidden_page_signature.html の buildSignaturePath と同じ考え方)
+    function buildSignaturePath(pts, targetW, targetH, padding) {
+      if (!pts || pts.length < 2) return "";
+      let minX = Infinity,
+        maxX = -Infinity,
+        minY = Infinity,
+        maxY = -Infinity;
+      pts.forEach((p) => {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+      });
+      const w = maxX - minX || 1;
+      const h = maxY - minY || 1;
+      const availW = targetW - padding * 2;
+      const availH = targetH - padding * 2;
+      const scale = Math.min(availW / w, availH / h);
+      const offsetX = (targetW - w * scale) / 2;
+      const offsetY = (targetH - h * scale) / 2;
+      const mapped = pts.map((p) => ({
+        x: offsetX + (p.x - minX) * scale,
+        y: offsetY + (p.y - minY) * scale,
+      }));
+      return mapped.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ") + " Z";
+    }
+
+    // 「表のページに戻る」ボタンを囲む形で、描いた円をもう一度描く(ふわっと描き込まれるアニメーション付き)
+    function drawSignature() {
+      const svg = signatureSvgRef.current;
+      if (!svg || lastPointsRef.current.length < 2) return;
+      svg.innerHTML = "";
+      const d = buildSignaturePath(lastPointsRef.current, 200, 84, 18);
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+
+      const len = path.getTotalLength();
+      path.style.strokeDasharray = String(len);
+      path.style.strokeDashoffset = String(len);
+      // 強制リフロー後にトランジションを効かせる
+      path.getBoundingClientRect();
+      path.style.transition = "stroke-dashoffset 1.2s ease";
+      requestAnimationFrame(() => {
+        path.style.strokeDashoffset = "0";
+      });
+    }
+
     function openDoor() {
       console.log("[BackPageGate] openDoor() 開始");
       interactionState = "opening";
@@ -232,6 +284,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
                   setDoorOpening(false);
                   clearTrail();
                   setExitBtnShown(true);
+                  drawSignature();
                   interactionState = "back";
                 }, 1600)
               );
@@ -249,6 +302,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           setDoorOpening(false);
           if (doorLayer) doorLayer.style.clipPath = "circle(0px at 50px 40px)";
           setDoorHintShown(true);
+          if (signatureSvgRef.current) signatureSvgRef.current.innerHTML = "";
           interactionState = "front";
         }, 500)
       );
@@ -365,14 +419,19 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
         <div ref={infoRef} className="bpg-info" />
         <div ref={astroPanelRef} className="bpg-astro-panel" />
         <div ref={constellationPanelRef} className="bpg-constellation-panel" />
-        <button
-          type="button"
-          className="bpg-exit"
-          style={{ opacity: exitBtnShown ? 1 : 0 }}
-          onClick={() => exitClickHandlerRef.current?.()}
+        <div
+          className="bpg-exit-wrap"
+          style={{ opacity: exitBtnShown ? 1 : 0, pointerEvents: exitBtnShown ? "auto" : "none" }}
         >
-          表のページに戻る
-        </button>
+          <svg ref={signatureSvgRef} className="bpg-signature" viewBox="0 0 200 84" />
+          <button
+            type="button"
+            className="bpg-exit"
+            onClick={() => exitClickHandlerRef.current?.()}
+          >
+            表のページに戻る
+          </button>
+        </div>
       </div>
     </>
   );
