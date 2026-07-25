@@ -427,10 +427,9 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
           <button
             type="button"
             className="bpg-exit"
+            aria-label="表のページに戻る"
             onClick={() => exitClickHandlerRef.current?.()}
-          >
-            表のページに戻る
-          </button>
+          />
         </div>
       </div>
     </>
