@@ -501,8 +501,15 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
             {movieState.status === "done" && movieState.data && (
               <div>
                 <p className="bpg-movie-title">
-                  {movieState.data.title}
-                  {movieState.data.year ? `(${movieState.data.year})` : ""}
+                  <a
+                    href={`https://filmarks.com/search/movies?q=${encodeURIComponent(movieState.data.title)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bpg-movie-title-link"
+                  >
+                    {movieState.data.title}
+                    {movieState.data.year ? `(${movieState.data.year})` : ""}
+                  </a>
                 </p>
                 {Array.isArray(movieState.data.cast) && movieState.data.cast.length > 0 && (
                   <p className="bpg-movie-cast">{movieState.data.cast.join(" / ")}</p>
