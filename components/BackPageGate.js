@@ -38,7 +38,11 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
   const [exitBtnShown, setExitBtnShown] = useState(false);
 
   useEffect(() => {
-    if (!triggerRef?.current) return;
+    if (!triggerRef?.current) {
+      console.log("[BackPageGate] triggerRef.current が null です。effectが動きません。");
+      return;
+    }
+    console.log("[BackPageGate] 初期化しました。triggerRef:", triggerRef.current);
     const cleanupFns = [];
     const timeoutIds = [];
 
@@ -69,6 +73,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     let interactionState = "front";
 
     function onTriggerClick(e) {
+      console.log("[BackPageGate] ロゴがクリックされました。interactionState:", interactionState);
       if (interactionState !== "front") return;
       interactionState = "door";
       const ox = e.clientX;
@@ -124,6 +129,7 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     }
     function onDown(e) {
       if (interactionState !== "door") return;
+      console.log("[BackPageGate] 描画開始");
       if (e.cancelable) e.preventDefault(); // スマホでのスクロール/ズームジェスチャーと競合させない
       drawing = true;
       points = [];
@@ -139,7 +145,9 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     function onUp() {
       if (!drawing) return;
       drawing = false;
-      if (detectCircle(points)) {
+      const isCircle = detectCircle(points);
+      console.log("[BackPageGate] 描画終了。点の数:", points.length, "円と判定:", isCircle);
+      if (isCircle) {
         openDoor();
         // トレイルはここではクリアしない。扉と同じタイミング・同じ消え方で一緒にフェードアウトさせる
       } else {
@@ -205,15 +213,18 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     });
 
     function openDoor() {
+      console.log("[BackPageGate] openDoor() 開始");
       interactionState = "opening";
       setDoorOpening(true);
       setDoorHintShown(false);
       timeoutIds.push(
         setTimeout(() => {
+          console.log("[BackPageGate] setBackShown(true) 実行");
           setBackShown(true);
           timeoutIds.push(
             setTimeout(() => {
               // 扉(と、その中にあるトレイルの軌跡)を同じタイミング・同じ消え方でフェードアウト
+              console.log("[BackPageGate] setDoorShown(false) 実行");
               setDoorShown(false);
               timeoutIds.push(
                 setTimeout(() => {
@@ -247,14 +258,21 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     // ============================================================
     // ② 夜の海岸シーン一式(決定版ロジック)
     // ============================================================
-    const disposeScene = buildScene({
-      sceneEl: sceneRef.current,
-      infoEl: infoRef.current,
-      astroPanelEl: astroPanelRef.current,
-      constellationPanelEl: constellationPanelRef.current,
-      randomPost: pickRandomPost(cards),
-      lyricPool: extractLyrics(cards),
-    });
+    console.log("[BackPageGate] buildScene呼び出し前。sceneEl:", sceneRef.current);
+    let disposeScene = () => {};
+    try {
+      disposeScene = buildScene({
+        sceneEl: sceneRef.current,
+        infoEl: infoRef.current,
+        astroPanelEl: astroPanelRef.current,
+        constellationPanelEl: constellationPanelRef.current,
+        randomPost: pickRandomPost(cards),
+        lyricPool: extractLyrics(cards),
+      });
+      console.log("[BackPageGate] buildScene 完了");
+    } catch (err) {
+      console.error("[BackPageGate] buildScene でエラー:", err);
+    }
     cleanupFns.push(disposeScene);
 
     return () => {
