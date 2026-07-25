@@ -643,8 +643,12 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
   const moonR = 18,
     moonCx = W * 0.7,
     moonCy = H * 0.17;
-  scene.appendChild(el("circle", { cx: moonCx, cy: moonCy, r: moonR * 3.4, fill: "url(#bpgMoonGlow)" }));
-  scene.appendChild(el("circle", { cx: moonCx, cy: moonCy, r: moonR, fill: "#2A2D3D" }));
+  scene.appendChild(
+    el("circle", { cx: moonCx, cy: moonCy, r: moonR * 3.4, fill: "url(#bpgMoonGlow)", "pointer-events": "none" })
+  );
+  scene.appendChild(
+    el("circle", { cx: moonCx, cy: moonCy, r: moonR, fill: "#2A2D3D", "pointer-events": "none" })
+  );
 
   function moonLitPath(cx, cy, r, phase) {
     if (phase < 0.02 || phase > 0.98) return null;
@@ -664,11 +668,16 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
   }
   const litPath = moonLitPath(moonCx, moonCy, moonR, moonPhase);
   if (litPath) {
-    scene.appendChild(el("path", { d: litPath, fill: "#EDEEF4" }));
+    scene.appendChild(el("path", { d: litPath, fill: "#EDEEF4", "pointer-events": "none" }));
     const clip = el("clipPath", { id: "bpgMoonClip" });
     clip.appendChild(el("path", { d: litPath }));
     defs.appendChild(clip);
-    const craters = el("g", { filter: "url(#bpgSoftBlur)", opacity: 0.5, "clip-path": "url(#bpgMoonClip)" });
+    const craters = el("g", {
+      filter: "url(#bpgSoftBlur)",
+      opacity: 0.5,
+      "clip-path": "url(#bpgMoonClip)",
+      "pointer-events": "none",
+    });
     const craterSpecs = [
       [moonCx - 4.5, moonCy - 4.5, 3.4, 2.5],
       [moonCx + 3.4, moonCy - 2.2, 2.2, 1.7],
@@ -815,26 +824,61 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
   }
   dateHit.addEventListener("click", onDateClick);
 
+  // 文字数ベースでざっくり折り返す(日本語はスペース区切りがないため文字数で判定)。
+  // 過去の投稿・歌詞演出のどちらでも使う共通関数。
+  function wrapByChars(text, maxChars) {
+    const lines = [];
+    let cur = "";
+    for (const ch of text) {
+      cur += ch;
+      if (cur.length >= maxChars) {
+        lines.push(cur);
+        cur = "";
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [""];
+  }
+
   // ---------- 過去の投稿ランダム表示 ----------
   const postY = H - H * 0.275;
+  const POST_FONT_SIZE = 14;
+  const POST_LINE_HEIGHT = POST_FONT_SIZE * 1.7;
+  const MAX_CHARS_PER_POST_LINE = 18;
   let onPostClick = null;
   let postHit = null;
   let postGroup = null;
   if (randomPost) {
+    const postLines = wrapByChars(randomPost, MAX_CHARS_PER_POST_LINE);
     postGroup = el("g", { id: "postText" });
-    const postText = el("text", {
+    const postTextEl = el("text", {
       x: W / 2,
       y: postY,
       "text-anchor": "middle",
       fill: "rgba(237,238,244,0.8)",
-      "font-size": "14",
+      "font-size": POST_FONT_SIZE,
       "letter-spacing": "0.06em",
       "font-family": 'Georgia, "Yu Mincho", serif',
     });
-    postText.textContent = randomPost;
-    postGroup.appendChild(postText);
+    const startDy = -((postLines.length - 1) / 2) * POST_LINE_HEIGHT;
+    postLines.forEach((line, i) => {
+      const tspan = el("tspan", { x: W / 2, dy: i === 0 ? startDy : POST_LINE_HEIGHT });
+      tspan.textContent = line;
+      postTextEl.appendChild(tspan);
+    });
+    postGroup.appendChild(postTextEl);
     scene.appendChild(postGroup);
-    postHit = el("rect", { id: "postHit", x: W / 2 - 130, y: postY - 22, width: 260, height: 44, fill: "transparent" });
+
+    const postHitHeight = postLines.length * POST_LINE_HEIGHT + 24;
+    const postHitWidth = Math.min(W - 60, MAX_CHARS_PER_POST_LINE * POST_FONT_SIZE * 1.15);
+    postHit = el("rect", {
+      id: "postHit",
+      x: W / 2 - postHitWidth / 2,
+      y: postY - postHitHeight / 2,
+      width: postHitWidth,
+      height: postHitHeight,
+      fill: "transparent",
+    });
     scene.appendChild(postHit);
     let postRevealed = false;
     onPostClick = () => {
@@ -854,19 +898,6 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
 
     function rectsOverlap(a, b) {
       return !(a.x2 < b.x1 || a.x1 > b.x2 || a.y2 < b.y1 || a.y1 > b.y2);
-    }
-    function wrapByChars(text, maxChars) {
-      const lines = [];
-      let cur = "";
-      for (const ch of text) {
-        cur += ch;
-        if (cur.length >= maxChars) {
-          lines.push(cur);
-          cur = "";
-        }
-      }
-      if (cur) lines.push(cur);
-      return lines.length ? lines : [""];
     }
 
     const LYRIC_FONT_SIZE = 13;
@@ -889,11 +920,22 @@ function buildScene({ sceneEl, infoEl, astroPanelEl, constellationPanelEl, rando
       lyricHalfH = (lyricLines.length * LYRIC_LINE_HEIGHT) / 2 + 12;
     }
 
+    // 過去の投稿の当たり判定は、折り返し後の実サイズに応じて可変なので、
+    // 実際に作られたpostHitの範囲があればそれを使い、なければ控えめな既定値にする
+    const postZone = postHit
+      ? {
+          x1: Number(postHit.getAttribute("x")),
+          y1: Number(postHit.getAttribute("y")),
+          x2: Number(postHit.getAttribute("x")) + Number(postHit.getAttribute("width")),
+          y2: Number(postHit.getAttribute("y")) + Number(postHit.getAttribute("height")),
+        }
+      : { x1: W / 2 - 150, y1: postY - 40, x2: W / 2 + 150, y2: postY + 40 };
+
     const exclusionZones = [
       { x1: moonCx - 95, y1: moonCy - 95, x2: moonCx + 95, y2: moonCy + 95 },
       { x1: dateStartX - colGap - 14 - 15, y1: dateStartY - 12 - 15, x2: dateStartX + 14 + 15, y2: dateStartY + 220 + 15 },
       { x1: originXc - 15, y1: originYc - 15, x2: originXc + boxW + 15, y2: originYc + boxH + 15 },
-      { x1: W / 2 - 150, y1: postY - 40, x2: W / 2 + 150, y2: postY + 40 },
+      postZone,
       { x1: 0, y1: H - 140, x2: 230, y2: H },
     ];
 
