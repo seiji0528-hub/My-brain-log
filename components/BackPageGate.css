@@ -274,6 +274,17 @@
   margin: 0 0 10px;
   line-height: 1.5;
 }
+.bpg-movie-title-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(201, 169, 106, 0.4);
+  text-underline-offset: 3px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+.bpg-movie-title-link:hover {
+  color: #c9a96a;
+  text-decoration-color: rgba(201, 169, 106, 0.9);
+}
 .bpg-movie-cast {
   font-size: 12px;
   letter-spacing: 0.04em;
