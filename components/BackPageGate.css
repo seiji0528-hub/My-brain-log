@@ -1,0 +1,221 @@
+.bpg-door-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(8, 9, 15, 0.97) 0%,
+    rgba(16, 17, 26, 0.93) 40%,
+    rgba(70, 66, 58, 0.5) 72%,
+    rgba(250, 248, 244, 0) 100%
+  );
+  clip-path: circle(0px at 50px 40px);
+  transition: clip-path 0.95s cubic-bezier(0.22, 0.7, 0.3, 1), opacity 1.6s ease;
+}
+.bpg-door-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.bpg-door-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 16%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: rgba(237, 234, 226, 0.55);
+  text-align: center;
+  line-height: 1.8;
+  white-space: nowrap;
+}
+.bpg-door-hint.shake {
+  animation: bpgShake 0.4s ease;
+}
+@keyframes bpgShake {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  25% {
+    transform: translate(calc(-50% - 6px));
+  }
+  75% {
+    transform: translate(calc(-50% + 6px));
+  }
+}
+.bpg-door-svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  height: 128px;
+  transform: translate(-50%, -56%);
+}
+.bpg-trail {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.bpg-door-panel {
+  transition: transform 0.85s cubic-bezier(0.5, 0, 0.2, 1), opacity 0.85s ease;
+}
+.bpg-door-layer.opening .bpg-door-panel.bpg-left {
+  transform: translateX(-46%) rotate(-4deg);
+  opacity: 0;
+}
+.bpg-door-layer.opening .bpg-door-panel.bpg-right {
+  transform: translateX(46%) rotate(4deg);
+  opacity: 0;
+}
+.bpg-door-glow {
+  opacity: 0;
+  transition: opacity 0.7s ease 0.15s;
+}
+.bpg-door-layer.opening .bpg-door-glow {
+  opacity: 1;
+}
+
+.bpg-back {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  transition: opacity 1.1s ease;
+  background: #000;
+}
+.bpg-stage {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.bpg-stage svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.bpg-info {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: rgba(233, 234, 242, 0.45);
+  letter-spacing: 0.04em;
+  font-family: "SF Mono", Menlo, monospace;
+  cursor: pointer;
+  z-index: 41;
+}
+.bpg-info b {
+  color: rgba(233, 234, 242, 0.75);
+  font-weight: 500;
+}
+.bpg-astro-panel {
+  position: fixed;
+  bottom: 78px;
+  left: 14px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: rgba(233, 234, 242, 0.7);
+  letter-spacing: 0.04em;
+  font-family: "SF Mono", Menlo, monospace;
+  max-width: 220px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  z-index: 41;
+}
+.bpg-astro-panel.revealed {
+  opacity: 1;
+}
+.bpg-astro-panel b {
+  color: rgba(201, 169, 106, 0.9);
+  font-weight: 500;
+}
+.bpg-constellation-panel {
+  position: fixed;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.9;
+  color: rgba(237, 238, 244, 0.85);
+  letter-spacing: 0.05em;
+  max-width: 70vw;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  z-index: 41;
+}
+.bpg-constellation-panel.revealed {
+  opacity: 1;
+}
+.bpg-constellation-panel .const-name {
+  display: block;
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  color: rgba(201, 169, 106, 0.9);
+  margin-bottom: 6px;
+}
+.bpg-exit {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 41;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #c9a96a;
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+}
+
+.twinkle {
+  animation: bpgTw 3.2s ease-in-out infinite;
+}
+@keyframes bpgTw {
+  0%,
+  100% {
+    opacity: var(--base-op, 0.6);
+  }
+  50% {
+    opacity: calc(var(--base-op, 0.6) * 0.35);
+  }
+}
+.shimmer {
+  animation: bpgSh 2.2s ease-in-out infinite;
+}
+@keyframes bpgSh {
+  0%,
+  100% {
+    opacity: var(--base-op, 0.5);
+  }
+  50% {
+    opacity: calc(var(--base-op, 0.5) * 0.45);
+  }
+}
+#dateText,
+#postText,
+#lyricText {
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+#dateText.revealed,
+#postText.revealed,
+#lyricText.revealed {
+  opacity: 1;
+}
+#dateHit,
+#postHit,
+#lyricHit,
+.const-hit {
+  cursor: pointer;
+}
