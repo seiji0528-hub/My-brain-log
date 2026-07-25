@@ -106,10 +106,10 @@ export default function BackPageGate({ triggerRef, cards = [] }) {
     function startTrail() {
       pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
       pathEl.setAttribute("stroke", "#C9A96A");
-      pathEl.setAttribute("stroke-width", "2");
+      pathEl.setAttribute("stroke-width", "2.6");
       pathEl.setAttribute("fill", "none");
       pathEl.setAttribute("stroke-linecap", "round");
-      pathEl.setAttribute("opacity", "0.6");
+      pathEl.setAttribute("opacity", "0.85");
       trailSvg.appendChild(pathEl);
     }
     function updateTrail() {
