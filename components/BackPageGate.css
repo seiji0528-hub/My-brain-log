@@ -167,7 +167,7 @@
 .bpg-exit-wrap {
   position: fixed;
   bottom: 6px;
-  right: -10px;
+  right: 6px;
   width: 200px;
   height: 84px;
   z-index: 41;
@@ -239,4 +239,102 @@
 #lyricHit,
 .const-hit {
   cursor: pointer;
+}
+
+.bpg-movie-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 10, 0.6);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.5s ease;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.bpg-movie-card {
+  width: min(420px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgba(15, 16, 24, 0.94);
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  border-radius: 18px;
+  padding: 26px 24px;
+  color: rgba(237, 238, 244, 0.92);
+  text-align: left;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.bpg-movie-title {
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  color: #f1e9d8;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.bpg-movie-cast {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(201, 169, 106, 0.9);
+  margin: 0 0 14px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+.bpg-movie-summary {
+  font-size: 13px;
+  line-height: 1.9;
+  color: rgba(237, 238, 244, 0.85);
+  margin: 0 0 20px;
+  overflow-wrap: break-word;
+}
+.bpg-movie-error {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(237, 238, 244, 0.8);
+  margin: 0 0 18px;
+}
+.bpg-movie-close {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #c9a96a;
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.bpg-movie-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  text-align: center;
+}
+.bpg-movie-loading-moon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f5f3ea, #cfc9b8 70%);
+  box-shadow: 0 0 24px rgba(240, 230, 200, 0.55);
+  animation: bpgMoonPulse 1.8s ease-in-out infinite;
+}
+@keyframes bpgMoonPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+.bpg-movie-loading p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(237, 238, 244, 0.75);
+  margin: 0;
 }
