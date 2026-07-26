@@ -6,16 +6,22 @@ import {
   saveCards, 
   createCard, 
   findRelatedCards, 
-  deleteCard
+  deleteCard,
+  loadPinnedTags,
+  pinTag,
+  unpinTag,
 } from "@/lib/storage";
 import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
 import SearchBar from "@/components/SearchBar";
 import CardForm from "@/components/CardForm";
 import BackPageGate from "@/components/BackPageGate";
+import PinnedTagsBar from "@/components/PinnedTagsBar";
+import TagPinMenu from "@/components/TagPinMenu";
 
 // 1桁のパスワード（ここを好きな数字に変えてもOK）
 const PASSCODE = "0";
+const MAX_PINNED_TAGS = 3;
 
 export default function Home() {
   const [cards, setCards] = useState([]);
@@ -32,6 +38,10 @@ export default function Home() {
 
   const logoRef = useRef(null);
 
+  // 固定タグ(ピン留め)
+  const [pinnedTags, setPinnedTags] = useState([]);
+  const [pinMenuTag, setPinMenuTag] = useState(null);
+
   useEffect(() => {
     const authStatus = localStorage.getItem("app_authenticated");
     if (authStatus === "true") {
@@ -44,6 +54,12 @@ export default function Home() {
       setLoaded(true);
     }
     fetchCards();
+
+    async function fetchPinnedTags() {
+      const tags = await loadPinnedTags();
+      setPinnedTags(tags);
+    }
+    fetchPinnedTags();
   }, []);
 
   function handlePassSubmit(e) {
@@ -61,6 +77,17 @@ export default function Home() {
     const set = new Set();
     cards.forEach((c) => (c.tags || []).forEach((t) => set.add(t)));
     return Array.from(set);
+  }, [cards]);
+
+  // タグの使用頻度(サジェストの並び順に使う。AI不要、既に読み込んでいるcardsから計算するだけ)
+  const tagFrequency = useMemo(() => {
+    const freq = {};
+    cards.forEach((c) => {
+      (c.tags || []).forEach((t) => {
+        freq[t] = (freq[t] || 0) + 1;
+      });
+    });
+    return freq;
   }, [cards]);
 
   const filteredCards = useMemo(() => {
@@ -115,6 +142,38 @@ export default function Home() {
   function handleCloseForm() {
     setFormOpen(false);
     setInitialFormData(null);
+  }
+
+  // --- 固定タグ(ピン留め) ---
+  function handleTagLongPress(tag) {
+    setPinMenuTag(tag);
+  }
+
+  async function handlePinTag() {
+    if (!pinMenuTag) return;
+    if (pinnedTags.length >= MAX_PINNED_TAGS) return; // 念のための二重ガード
+    try {
+      await pinTag(pinMenuTag);
+      setPinnedTags((prev) => [...prev, pinMenuTag]);
+    } catch (error) {
+      console.error("タグの固定に失敗しました:", error);
+      alert("タグの固定に失敗しました。もう一度お試しください。");
+    } finally {
+      setPinMenuTag(null);
+    }
+  }
+
+  async function handleUnpinTag() {
+    if (!pinMenuTag) return;
+    try {
+      await unpinTag(pinMenuTag);
+      setPinnedTags((prev) => prev.filter((t) => t !== pinMenuTag));
+    } catch (error) {
+      console.error("タグの固定解除に失敗しました:", error);
+      alert("固定解除に失敗しました。もう一度お試しください。");
+    } finally {
+      setPinMenuTag(null);
+    }
   }
 
   if (!isAuthenticated) {
@@ -177,6 +236,8 @@ export default function Home() {
         allTags={allTags}
         activeTag={activeTag}
         onTagToggle={(t) => setActiveTag((prev) => (prev === t ? null : t))}
+        onTagLongPress={handleTagLongPress}
+        pinnedTags={pinnedTags}
       />
 
       <section className="flex flex-1 flex-col gap-3 py-4">
@@ -239,8 +300,26 @@ export default function Home() {
           onSave={handleSaveCard}
           initialData={initialFormData}
           allTags={allTags}
+          tagFrequency={tagFrequency}
+          pinnedTags={pinnedTags}
         />
       )}
+
+      <PinnedTagsBar
+        pinnedTags={pinnedTags}
+        activeTag={activeTag}
+        onTagToggle={(t) => setActiveTag((prev) => (prev === t ? null : t))}
+        onTagLongPress={handleTagLongPress}
+      />
+
+      <TagPinMenu
+        tag={pinMenuTag}
+        isPinned={pinMenuTag ? pinnedTags.includes(pinMenuTag) : false}
+        canPinMore={pinnedTags.length < MAX_PINNED_TAGS}
+        onPin={handlePinTag}
+        onUnpin={handleUnpinTag}
+        onClose={() => setPinMenuTag(null)}
+      />
 
       <BackPageGate triggerRef={logoRef} cards={cards} />
     </main>
