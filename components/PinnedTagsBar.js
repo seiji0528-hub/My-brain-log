@@ -1,8 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import TagChip from "./TagChip";
 
+const ATTRACT_DURATION_MS = 4000; // この時間だけ揺れて、その後は静止する
+
 export default function PinnedTagsBar({ pinnedTags, activeTag, onTagToggle, onTagLongPress }) {
+  const [attracting, setAttracting] = useState(true);
+
+  // アプリを開いてから数秒だけ揺らして目を引き、その後は静止させる
+  // (常時アニメーションさせても負荷はごく小さいが、作業中に気が散らないようにする狙い)
+  useEffect(() => {
+    const timer = setTimeout(() => setAttracting(false), ATTRACT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!pinnedTags || pinnedTags.length === 0) return null;
 
   return (
@@ -10,8 +22,8 @@ export default function PinnedTagsBar({ pinnedTags, activeTag, onTagToggle, onTa
       {pinnedTags.map((t, i) => (
         <div
           key={t}
-          className="pinned-wobble"
-          style={{ animationDelay: `${i * 0.35}s` }}
+          className={attracting ? "pinned-wobble" : ""}
+          style={attracting ? { animationDelay: `${i * 0.35}s` } : undefined}
         >
           <TagChip
             tag={t}
