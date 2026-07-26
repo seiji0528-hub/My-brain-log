@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { formatRawText, suggestTitle, suggestTags } from "@/lib/aiClient";
 import { normalizeTags } from "@/lib/storage";
 
-export default function CardForm({ onClose, onSave, initialData = null, allTags = [] }) {
+export default function CardForm({
+  onClose,
+  onSave,
+  initialData = null,
+  allTags = [],
+  tagFrequency = {},
+  pinnedTags = [],
+}) {
   const [rawText, setRawText] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -24,6 +31,9 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [tagSuggestChecked, setTagSuggestChecked] = useState(false);
   const [tagSuggestError, setTagSuggestError] = useState("");
+
+  // タグ入力の前方一致サジェスト用
+  const [tagInputFocused, setTagInputFocused] = useState(false);
 
   // 再利用（コピー）用データが渡された場合にフォームへセット
   useEffect(() => {
@@ -108,6 +118,42 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
       setTagsText([...current, tag].join(" "));
     }
   }
+
+  // --- ここから:タグ入力の前方一致サジェスト(AI不要、既に持っているallTags/頻度から計算) ---
+
+  // 今まさに入力中の「最後の1語」を取り出す(スペース区切りの一番最後)
+  const currentTagToken = useMemo(() => {
+    const parts = tagsText.split(/[,\s　]+/);
+    return parts[parts.length - 1] || "";
+  }, [tagsText]);
+
+  const tagSuggestions = useMemo(() => {
+    const q = currentTagToken.replace(/^#/, "").trim().toLowerCase();
+    if (!q) return [];
+    const already = new Set(normalizeTags(tagsText));
+    return allTags
+      .filter((t) => t.toLowerCase().startsWith(q) && !already.has(t))
+      .sort((a, b) => {
+        const aPinned = pinnedTags.includes(a) ? 1 : 0;
+        const bPinned = pinnedTags.includes(b) ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned; // 固定タグを優先
+        const freqA = tagFrequency[a] || 0;
+        const freqB = tagFrequency[b] || 0;
+        return freqB - freqA; // 使用頻度が高い順
+      })
+      .slice(0, 6);
+  }, [currentTagToken, allTags, tagsText, pinnedTags, tagFrequency]);
+
+  // 候補をタップ:今入力中の最後の語を、選んだタグに置き換えて次に続けられるようにする
+  function applyTagSuggestion(tag) {
+    const parts = tagsText.split(/[,\s　]+/);
+    parts[parts.length - 1] = tag;
+    setTagsText(parts.filter(Boolean).join(" ") + " ");
+  }
+
+  const showTagSuggestions = tagInputFocused && tagSuggestions.length > 0;
+
+  // --- ここまで ---
 
   function handleSave() {
     if (!title.trim() && !body.trim()) return;
@@ -228,13 +274,42 @@ export default function CardForm({ onClose, onSave, initialData = null, allTags 
                     {tagSuggestLoading ? "探し中…" : "✦ 近い過去タグを探す"}
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={tagsText}
-                  onChange={(e) => setTagsText(e.target.value)}
-                  placeholder="自分の性質 意思決定"
-                  className="tap-target w-full rounded-card border border-line bg-paper-card px-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
-                />
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={tagsText}
+                    onChange={(e) => setTagsText(e.target.value)}
+                    onFocus={() => setTagInputFocused(true)}
+                    onBlur={() => {
+                      // サジェストのクリック(onMouseDown)より先にblurが発火しないよう少し遅らせる
+                      setTimeout(() => setTagInputFocused(false), 120);
+                    }}
+                    placeholder="自分の性質 意思決定"
+                    className="tap-target w-full rounded-card border border-line bg-paper-card px-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
+                  />
+
+                  {/* 前方一致の予測変換ドロップダウン */}
+                  {showTagSuggestions && (
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-card border border-line bg-paper shadow-lg">
+                      {tagSuggestions.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          // clickではなくmousedownで拾うことで、input側のblurより先に発火させる
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            applyTagSuggestion(t);
+                          }}
+                          className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm text-ink hover:bg-paper-card active:bg-paper-dark"
+                        >
+                          {pinnedTags.includes(t) && <span className="text-xs">📌</span>}
+                          <span>#{t}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {suggestedTags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
