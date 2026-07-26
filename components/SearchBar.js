@@ -1,8 +1,15 @@
 "use client";
-
 import TagChip from "./TagChip";
 
-export default function SearchBar({ query, onQueryChange, allTags, activeTag, onTagToggle }) {
+export default function SearchBar({
+  query,
+  onQueryChange,
+  allTags,
+  activeTag,
+  onTagToggle,
+  onTagLongPress,
+  pinnedTags = [],
+}) {
   return (
     <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-paper/95 px-4 pb-3 pt-3 backdrop-blur">
       <div className="relative">
@@ -18,7 +25,6 @@ export default function SearchBar({ query, onQueryChange, allTags, activeTag, on
           className="tap-target w-full rounded-full border border-line bg-paper-card py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
-
       {allTags.length > 0 && (
         <div className="mt-2.5 flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
           {allTags.map((t) => (
@@ -26,8 +32,10 @@ export default function SearchBar({ query, onQueryChange, allTags, activeTag, on
               key={t}
               tag={t}
               size="sm"
+              pinned={pinnedTags.includes(t)}
               active={activeTag === t}
               onClick={() => onTagToggle(t)}
+              onLongPress={onTagLongPress ? () => onTagLongPress(t) : undefined}
             />
           ))}
         </div>
