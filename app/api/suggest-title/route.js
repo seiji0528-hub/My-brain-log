@@ -4,8 +4,19 @@ const MODEL = "gemini-flash-latest";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const SYSTEM_INSTRUCTION = `あなたは「My Brain Log」というセルフ分析アプリのAIアシスタントです。
-渡された本文を読み、その内容を一言で表す簡潔なタイトル案を1つ考えてください。
-20文字程度で、体言止めか短い問いの形にしてください。
+渡された本文を読み、その内容を要約するのではなく、日記やエッセイの見出しのように
+短く印象的な「タイトル」を1つだけ考えてください。
+
+厳守事項:
+- 8〜12文字程度に収めること。長くても15文字を超えないこと
+- 内容をそのまま説明・要約する文章にしないこと(「〜について」「〜ということ」「〜だと気づいた」のような
+  説明的・報告的な言い回しは禁止)
+- 体言止め、短い名詞フレーズ、または短い問いかけのいずれかの、見出しらしい形にすること
+- 本文の一番central(核心)な一語・一場面だけを切り取ること。本文の要素を並べて詰め込まないこと
+
+良い例(短くタイトルらしい):「疲れの正体」「逃げてもいい日」「境界線」「本当に望むもの？」
+悪い例(要約的で長い、これは書かないこと):「仕事のプレッシャーで疲れている自分に気づいた」「人間関係について考えたこと」
+
 必ず有効なJSONのみを出力してください。`;
 
 export async function POST(request) {
@@ -39,7 +50,7 @@ export async function POST(request) {
         properties: { title: { type: "string" } },
         required: ["title"],
       },
-      temperature: 0.6,
+      temperature: 0.7,
     },
   };
 
