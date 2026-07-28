@@ -11,6 +11,12 @@ import {
   pinTag,
   unpinTag,
 } from "@/lib/storage";
+import {
+  runDailyReminderMaintenance,
+  getDueReminderCards,
+  getReminderSettings,
+  hasPassedNotifyTime,
+} from "@/lib/reminders";
 import CardItem from "@/components/CardItem";
 import RelatedCards from "@/components/RelatedCards";
 import SearchBar from "@/components/SearchBar";
@@ -18,6 +24,8 @@ import CardForm from "@/components/CardForm";
 import BackPageGate from "@/components/BackPageGate";
 import PinnedTagsBar from "@/components/PinnedTagsBar";
 import TagPinMenu from "@/components/TagPinMenu";
+import ReminderBadge from "@/components/ReminderBadge";
+import ReminderView from "@/components/ReminderView";
 
 // 1桁のパスワード（ここを好きな数字に変えてもOK）
 const PASSCODE = "0";
@@ -42,6 +50,11 @@ export default function Home() {
   const [pinnedTags, setPinnedTags] = useState([]);
   const [pinMenuTag, setPinMenuTag] = useState(null);
 
+  // 自己刷り込みリマインダー
+  const [reminderItems, setReminderItems] = useState([]);
+  const [notifyTime, setNotifyTime] = useState("09:00");
+  const [reminderViewOpen, setReminderViewOpen] = useState(false);
+
   useEffect(() => {
     const authStatus = localStorage.getItem("app_authenticated");
     if (authStatus === "true") {
@@ -60,6 +73,17 @@ export default function Home() {
       setPinnedTags(tags);
     }
     fetchPinnedTags();
+
+    async function initReminders() {
+      await runDailyReminderMaintenance();
+      const [items, settings] = await Promise.all([
+        getDueReminderCards(),
+        getReminderSettings(),
+      ]);
+      setReminderItems(items);
+      setNotifyTime(settings.notifyTime);
+    }
+    initReminders();
   }, []);
 
   function handlePassSubmit(e) {
@@ -320,6 +344,22 @@ export default function Home() {
         onUnpin={handleUnpinTag}
         onClose={() => setPinMenuTag(null)}
       />
+
+      <ReminderBadge
+        count={reminderItems.length}
+        visible={hasPassedNotifyTime(notifyTime)}
+        onClick={() => setReminderViewOpen(true)}
+      />
+
+      {reminderViewOpen && (
+        <ReminderView
+          items={reminderItems}
+          notifyTime={notifyTime}
+          onClose={() => setReminderViewOpen(false)}
+          onConsumeTop={() => setReminderItems((prev) => prev.slice(1))}
+          onRefreshSettings={(t) => setNotifyTime(t)}
+        />
+      )}
 
       <BackPageGate triggerRef={logoRef} cards={cards} />
     </main>
