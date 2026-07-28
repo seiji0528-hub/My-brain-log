@@ -163,6 +163,13 @@ export default function Home() {
     setFormOpen(true);
   }
 
+  async function handleOpenReminderView() {
+    // 開くたびに最新の状態を取り直す(時刻をまたいで待っていた場合などに対応)
+    const items = await getDueReminderCards();
+    setReminderItems(items);
+    setReminderViewOpen(true);
+  }
+
   function handleCloseForm() {
     setFormOpen(false);
     setInitialFormData(null);
@@ -348,7 +355,7 @@ export default function Home() {
       <ReminderBadge
         count={reminderItems.length}
         visible={hasPassedNotifyTime(notifyTime)}
-        onClick={() => setReminderViewOpen(true)}
+        onClick={handleOpenReminderView}
       />
 
       {reminderViewOpen && (
