@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ReminderCard from "./ReminderCard";
 import {
   swipeReminderRight,
@@ -15,9 +15,12 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
   const [showSettings, setShowSettings] = useState(false);
   const [timeInput, setTimeInput] = useState(notifyTime || "09:00");
   const [savingTime, setSavingTime] = useState(false);
+  const cardRef = useRef(null);
 
   const current = items[0];
 
+  // カードが実際に画面外へ飛んでいくアニメーションを終えてから、初めてこれらが呼ばれる
+  // (ReminderCard内のtriggerExitがEXIT_DURATION後にコールバックするため)
   async function handleSwipeRight() {
     if (!current) return;
     onConsumeTop();
@@ -81,6 +84,11 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
     }
   }
 
+  // PCのボタンも、スワイプと同じ「画面外へ飛んでいくアニメーション」を経由させる
+  function triggerButtonSwipe(dir) {
+    cardRef.current?.triggerExit(dir);
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink/40 p-4 animate-fade-in">
       <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
@@ -132,6 +140,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
           {current ? (
             <ReminderCard
               key={current.queueId}
+              ref={cardRef}
               item={current}
               onSwipeRight={handleSwipeRight}
               onSwipeLeft={handleSwipeLeft}
@@ -151,7 +160,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
           <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-2">
             <button
               type="button"
-              onClick={handleSwipeUp}
+              onClick={() => triggerButtonSwipe("up")}
               className="tap-target flex h-11 w-11 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
               aria-label="また近いうちに"
             >
@@ -160,7 +169,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
             <div className="flex justify-center gap-6">
               <button
                 type="button"
-                onClick={handleSwipeLeft}
+                onClick={() => triggerButtonSwipe("left")}
                 className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
                 aria-label="考えが変わった"
               >
@@ -168,7 +177,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
               </button>
               <button
                 type="button"
-                onClick={handleSwipeDown}
+                onClick={() => triggerButtonSwipe("down")}
                 className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
                 aria-label="もう不要"
               >
@@ -176,7 +185,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
               </button>
               <button
                 type="button"
-                onClick={handleSwipeRight}
+                onClick={() => triggerButtonSwipe("right")}
                 className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
                 aria-label="今も変わらない"
               >
