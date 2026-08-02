@@ -13,7 +13,7 @@ function formatDate(iso) {
   ).padStart(2, "0")}`;
 }
 
-export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeDown, onSaveEdit }) {
+export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeUp, onSwipeDown, onSaveEdit }) {
   const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false });
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
@@ -48,6 +48,8 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeD
 
     if (absY > SWIPE_THRESHOLD && absY > absX && y > 0) {
       onSwipeDown();
+    } else if (absY > SWIPE_THRESHOLD && absY > absX && y < 0) {
+      onSwipeUp();
     } else if (absX > SWIPE_THRESHOLD && absX > absY) {
       if (x > 0) onSwipeRight();
       else onSwipeLeft();
@@ -69,6 +71,8 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeD
   const hintLabel =
     Math.abs(drag.y) > Math.abs(drag.x) && drag.y > 0
       ? "もう不要"
+      : Math.abs(drag.y) > Math.abs(drag.x) && drag.y < 0
+      ? "また近いうちに"
       : drag.x > 0
       ? "今も変わらない"
       : drag.x < 0
@@ -77,6 +81,8 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeD
   const hintColor =
     hintLabel === "もう不要"
       ? "text-ink-faint"
+      : hintLabel === "また近いうちに"
+      ? "text-[#4A6FA5]"
       : hintLabel === "今も変わらない"
       ? "text-[#3E7A5C]"
       : "text-[#93445A]";
@@ -141,7 +147,7 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeD
               ✎ この場で編集する
             </button>
             <p className="text-[11px] leading-relaxed text-ink-faint">
-              → 変わらない　← 変わった　↓ 不要
+              → 変わらない　← 変わった　↑ また近いうちに　↓ 不要
             </p>
           </div>
         </>
