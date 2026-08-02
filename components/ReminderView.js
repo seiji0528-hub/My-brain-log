@@ -5,6 +5,7 @@ import ReminderCard from "./ReminderCard";
 import {
   swipeReminderRight,
   swipeReminderLeft,
+  swipeReminderUp,
   swipeReminderDown,
   updateNotifyTime,
 } from "@/lib/reminders";
@@ -32,6 +33,16 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
     onConsumeTop();
     try {
       await swipeReminderLeft(current.queueId);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleSwipeUp() {
+    if (!current) return;
+    onConsumeTop();
+    try {
+      await swipeReminderUp(current.queueId);
     } catch (e) {
       console.error(e);
     }
@@ -124,6 +135,7 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
               item={current}
               onSwipeRight={handleSwipeRight}
               onSwipeLeft={handleSwipeLeft}
+              onSwipeUp={handleSwipeUp}
               onSwipeDown={handleSwipeDown}
               onSaveEdit={handleSaveEdit}
             />
@@ -136,31 +148,41 @@ export default function ReminderView({ items, notifyTime, onClose, onConsumeTop,
         </div>
 
         {current && (
-          <div className="flex shrink-0 justify-center gap-6 pb-4 pt-2">
+          <div className="flex shrink-0 flex-col items-center gap-2 pb-4 pt-2">
             <button
               type="button"
-              onClick={handleSwipeLeft}
-              className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
-              aria-label="考えが変わった"
+              onClick={handleSwipeUp}
+              className="tap-target flex h-11 w-11 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
+              aria-label="また近いうちに"
             >
-              ←
+              ↑
             </button>
-            <button
-              type="button"
-              onClick={handleSwipeDown}
-              className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
-              aria-label="もう不要"
-            >
-              ↓
-            </button>
-            <button
-              type="button"
-              onClick={handleSwipeRight}
-              className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
-              aria-label="今も変わらない"
-            >
-              →
-            </button>
+            <div className="flex justify-center gap-6">
+              <button
+                type="button"
+                onClick={handleSwipeLeft}
+                className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
+                aria-label="考えが変わった"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={handleSwipeDown}
+                className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
+                aria-label="もう不要"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={handleSwipeRight}
+                className="tap-target flex h-12 w-12 items-center justify-center rounded-full bg-paper text-lg shadow active:scale-95"
+                aria-label="今も変わらない"
+              >
+                →
+              </button>
+            </div>
           </div>
         )}
       </div>
