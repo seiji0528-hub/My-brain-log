@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useImperativeHandle, forwardRef, useRef, useState } from "react";
 import { colorForTag } from "@/lib/tagColor";
 import TagChip from "./TagChip";
 
 const SWIPE_THRESHOLD = 90; // これ以上動かしたら「スワイプ成立」とみなすピクセル数
+const EXIT_DISTANCE = 700; // 飛んでいく先までの距離(px)
+const EXIT_DURATION = 280; // 飛んでいくアニメーションの時間(ms)
 
 function formatDate(iso) {
   const d = new Date(iso);
@@ -13,15 +15,49 @@ function formatDate(iso) {
   ).padStart(2, "0")}`;
 }
 
-export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeUp, onSwipeDown, onSaveEdit }) {
+const ReminderCard = forwardRef(function ReminderCard(
+  { item, onSwipeRight, onSwipeLeft, onSwipeUp, onSwipeDown, onSaveEdit },
+  ref
+) {
   const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false });
+  const [exitDir, setExitDir] = useState(null); // null | "up" | "down" | "left" | "right"
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editBody, setEditBody] = useState(item.body);
   const [editTags, setEditTags] = useState((item.tags || []).join(" "));
   const startRef = useRef({ x: 0, y: 0 });
+  const exitTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, []);
 
   const spineColor = item.tags && item.tags.length ? colorForTag(item.tags[0]).bar : "bg-line";
+
+  const callbackFor = {
+    right: onSwipeRight,
+    left: onSwipeLeft,
+    up: onSwipeUp,
+    down: onSwipeDown,
+  };
+
+  // スワイプ成立時:まず実際に画面外へ飛んでいくアニメーションを再生し、
+  // それが終わってから(=見た目上ちゃんと消えてから)初めて次のカードへ進む処理を呼ぶ
+  function triggerExit(dir) {
+    if (exitDir) return; // 二重発火防止
+    setExitDir(dir);
+    exitTimerRef.current = setTimeout(() => {
+      const cb = callbackFor[dir];
+      cb && cb();
+    }, EXIT_DURATION);
+  }
+
+  // PCのボタンなど、外部からも同じアニメーションを発火できるようにする
+  useImperativeHandle(ref, () => ({
+    triggerExit,
+  }));
 
   function pointerPos(e) {
     if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -29,30 +65,31 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeU
   }
 
   function handlePointerDown(e) {
-    if (editing) return;
+    if (editing || exitDir) return;
     startRef.current = pointerPos(e);
     setDrag({ x: 0, y: 0, dragging: true });
   }
 
   function handlePointerMove(e) {
-    if (!drag.dragging || editing) return;
+    if (!drag.dragging || editing || exitDir) return;
     const p = pointerPos(e);
     setDrag({ x: p.x - startRef.current.x, y: p.y - startRef.current.y, dragging: true });
   }
 
   function handlePointerUp() {
-    if (!drag.dragging || editing) return;
+    if (!drag.dragging || editing || exitDir) return;
     const { x, y } = drag;
     const absX = Math.abs(x);
     const absY = Math.abs(y);
 
     if (absY > SWIPE_THRESHOLD && absY > absX && y > 0) {
-      onSwipeDown();
+      triggerExit("down");
     } else if (absY > SWIPE_THRESHOLD && absY > absX && y < 0) {
-      onSwipeUp();
-    } else if (absX > SWIPE_THRESHOLD && absX > absY) {
-      if (x > 0) onSwipeRight();
-      else onSwipeLeft();
+      triggerExit("up");
+    } else if (absX > SWIPE_THRESHOLD && absX > absY && x > 0) {
+      triggerExit("right");
+    } else if (absX > SWIPE_THRESHOLD && absX > absY && x < 0) {
+      triggerExit("left");
     }
     setDrag({ x: 0, y: 0, dragging: false });
   }
@@ -66,16 +103,42 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeU
     setEditing(false);
   }
 
-  const rotate = drag.x / 18;
+  // 表示用のtransform/opacityを、ドラッグ中/飛んでいく最中/通常時で出し分ける
+  let transform;
+  let transition;
+  let opacity = 1;
+
+  if (exitDir === "right") {
+    transform = `translate(${EXIT_DISTANCE}px, ${drag.y}px) rotate(24deg)`;
+    transition = `transform ${EXIT_DURATION}ms ease, opacity ${EXIT_DURATION}ms ease`;
+    opacity = 0;
+  } else if (exitDir === "left") {
+    transform = `translate(-${EXIT_DISTANCE}px, ${drag.y}px) rotate(-24deg)`;
+    transition = `transform ${EXIT_DURATION}ms ease, opacity ${EXIT_DURATION}ms ease`;
+    opacity = 0;
+  } else if (exitDir === "up") {
+    transform = `translate(${drag.x}px, -${EXIT_DISTANCE}px) rotate(0deg)`;
+    transition = `transform ${EXIT_DURATION}ms ease, opacity ${EXIT_DURATION}ms ease`;
+    opacity = 0;
+  } else if (exitDir === "down") {
+    transform = `translate(${drag.x}px, ${EXIT_DISTANCE}px) rotate(0deg)`;
+    transition = `transform ${EXIT_DURATION}ms ease, opacity ${EXIT_DURATION}ms ease`;
+    opacity = 0;
+  } else {
+    const rotate = drag.x / 18;
+    transform = `translate(${drag.x}px, ${drag.y}px) rotate(${rotate}deg)`;
+    transition = drag.dragging ? "none" : "transform 0.25s ease";
+  }
+
   const hintOpacity = Math.min(1, Math.max(Math.abs(drag.x), Math.abs(drag.y)) / SWIPE_THRESHOLD);
   const hintLabel =
-    Math.abs(drag.y) > Math.abs(drag.x) && drag.y > 0
+    exitDir === "down" || (Math.abs(drag.y) > Math.abs(drag.x) && drag.y > 0)
       ? "もう不要"
-      : Math.abs(drag.y) > Math.abs(drag.x) && drag.y < 0
+      : exitDir === "up" || (Math.abs(drag.y) > Math.abs(drag.x) && drag.y < 0)
       ? "また近いうちに"
-      : drag.x > 0
+      : exitDir === "right" || drag.x > 0
       ? "今も変わらない"
-      : drag.x < 0
+      : exitDir === "left" || drag.x < 0
       ? "考えが変わった"
       : "";
   const hintColor =
@@ -91,8 +154,9 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeU
     <div
       className="relative mx-auto w-full max-w-sm select-none overflow-hidden rounded-card border border-line bg-paper-card shadow-card"
       style={{
-        transform: `translate(${drag.x}px, ${drag.y}px) rotate(${rotate}deg)`,
-        transition: drag.dragging ? "none" : "transform 0.25s ease",
+        transform,
+        transition,
+        opacity,
         touchAction: "none",
       }}
       onMouseDown={handlePointerDown}
@@ -105,10 +169,10 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeU
     >
       <div className={`absolute left-0 top-0 h-full w-1.5 ${spineColor}`} />
 
-      {hintLabel && (
+      {(hintLabel && (drag.dragging || exitDir)) && (
         <div
           className={`pointer-events-none absolute right-4 top-3.5 z-10 text-xs font-bold ${hintColor}`}
-          style={{ opacity: hintOpacity }}
+          style={{ opacity: exitDir ? 1 : hintOpacity }}
         >
           {hintLabel}
         </div>
@@ -192,4 +256,6 @@ export default function ReminderCard({ item, onSwipeRight, onSwipeLeft, onSwipeU
       )}
     </div>
   );
-}
+});
+
+export default ReminderCard;
