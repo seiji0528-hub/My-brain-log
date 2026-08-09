@@ -92,15 +92,20 @@ export default function ReferencePicker({ reference, onChange }) {
 
   return (
     <div>
-      <div
+      <input
+        type="text"
+        readOnly={false}
+        value=""
+        onChange={() => {}} // ペースト以外の直接入力は無視する(貼り付け専用の見た目だけの欄)
         onPaste={handlePaste}
-        tabIndex={0}
-        className="flex min-h-[52px] cursor-text items-center justify-center rounded-card border border-dashed border-line bg-paper-card px-3 py-2 text-center text-xs text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
-      >
-        {uploading
-          ? "アップロード中…"
-          : "ここをタップしてから、画像やURLを貼り付け（Cmd/Ctrl+V）"}
-      </div>
+        placeholder={
+          uploading
+            ? "アップロード中…"
+            : "ここをタップしてから、画像やURLを貼り付け（Cmd/Ctrl+V）"
+        }
+        disabled={uploading}
+        className="tap-target flex min-h-[52px] w-full cursor-text items-center justify-center rounded-card border border-dashed border-line bg-paper-card px-3 text-center text-xs text-ink-faint placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
+      />
       <div className="mt-1.5 flex items-center gap-1.5">
         <input
           type="text"
