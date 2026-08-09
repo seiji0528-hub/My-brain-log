@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { formatRawText, suggestTitle, suggestTags } from "@/lib/aiClient";
 import { normalizeTags } from "@/lib/storage";
+import ReferencePicker from "./ReferencePicker";
 
 export default function CardForm({
   onClose,
@@ -20,6 +21,13 @@ export default function CardForm({
   const [aiError, setAiError] = useState("");
   // 初期データがある場合は最初から review 画面にする
   const [step, setStep] = useState(initialData ? "review" : "raw");
+
+  // 参考資料(画像 or URL。1枚のカードにつき1つだけ)
+  const [reference, setReference] = useState(
+    initialData?.referenceType
+      ? { type: initialData.referenceType, value: initialData.referenceValue }
+      : null
+  );
 
   // タイトル案（候補として表示し、タップした時だけ反映）用のステート
   const [titleSuggestion, setTitleSuggestion] = useState("");
@@ -161,6 +169,8 @@ export default function CardForm({
       title: title.trim() || "（無題の思考）",
       body: body.trim(),
       tags: normalizeTags(tagsText),
+      referenceType: reference?.type || null,
+      referenceValue: reference?.value || null,
     });
   }
 
@@ -341,6 +351,14 @@ export default function CardForm({
                     近い過去タグは見つかりませんでした
                   </p>
                 )}
+              </div>
+
+              {/* 参考資料(画像 or URL。1枚のカードにつき1つだけ) */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-faint">
+                  参考資料（任意）
+                </label>
+                <ReferencePicker reference={reference} onChange={setReference} />
               </div>
             </div>
           )}
