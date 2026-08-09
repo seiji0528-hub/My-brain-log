@@ -3,6 +3,7 @@
 import { useEffect, useImperativeHandle, forwardRef, useRef, useState } from "react";
 import { colorForTag } from "@/lib/tagColor";
 import TagChip from "./TagChip";
+import ReferencePreview from "./ReferencePreview";
 
 const SWIPE_THRESHOLD = 90; // これ以上動かしたら「スワイプ成立」とみなすピクセル数
 const EXIT_DISTANCE = 700; // 飛んでいく先までの距離(px)
@@ -189,9 +190,14 @@ const ReminderCard = forwardRef(function ReminderCard(
                 {formatDate(item.createdAt)}
               </span>
             </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
-              {item.body}
-            </p>
+            <div className="mt-2 flex items-start gap-2.5">
+              <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
+                {item.body}
+              </p>
+              {item.referenceType && (
+                <ReferencePreview type={item.referenceType} value={item.referenceValue} />
+              )}
+            </div>
           </div>
 
           {item.tags && item.tags.length > 0 && (
