@@ -7,7 +7,7 @@ const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 
 export default function ReferencePicker({ reference, onChange }) {
   const [uploading, setUploading] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
+  const [typedValue, setTypedValue] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
 
@@ -29,6 +29,7 @@ export default function ReferencePicker({ reference, onChange }) {
   }
 
   function handlePaste(e) {
+    // ① 画像がクリップボードにあれば最優先でアップロード
     const items = e.clipboardData?.items;
     if (items) {
       for (const item of items) {
@@ -40,44 +41,61 @@ export default function ReferencePicker({ reference, onChange }) {
         }
       }
     }
+    // ② テキスト:URLならリンクとして、それ以外(長文含む・改行も保持)は引用として保存
     const text = e.clipboardData?.getData("text");
-    if (text && URL_REGEX.test(text.trim())) {
+    if (text && text.trim()) {
       e.preventDefault();
-      onChange({ type: "url", value: text.trim() });
+      const trimmed = text.trim();
+      if (URL_REGEX.test(trimmed)) {
+        onChange({ type: "url", value: trimmed });
+      } else {
+        onChange({ type: "text", value: text }); // 改行を保つため trim だけでtext自体は加工しない
+      }
+      setTypedValue("");
     }
   }
 
-  function handleUrlSubmit() {
-    const v = urlInput.trim();
+  function commitTypedValue() {
+    const v = typedValue.trim();
     if (!v) return;
-    if (!URL_REGEX.test(v)) {
-      setError("URLの形式が正しくありません(http(s)://から始まる形にしてください)");
-      return;
+    if (URL_REGEX.test(v)) {
+      onChange({ type: "url", value: v });
+    } else {
+      onChange({ type: "text", value: v });
     }
+    setTypedValue("");
     setError("");
-    onChange({ type: "url", value: v });
-    setUrlInput("");
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTypedValue();
+    }
   }
 
   async function handleRemove() {
     if (reference?.type === "image") {
-      // 失敗しても致命的ではないので待たずに投げっぱなしにする
       deleteReferenceImage(reference.value).catch(() => {});
     }
     onChange(null);
   }
 
+  // --- 既に何か添付されている状態 ---
   if (reference && reference.type) {
+    const icon = reference.type === "url" ? "🔗" : reference.type === "text" ? "❝" : null;
     return (
       <div className="flex items-center gap-2 rounded-card border border-line bg-paper-card p-2">
         {reference.type === "image" ? (
           <img src={reference.value} alt="" className="h-12 w-12 shrink-0 rounded object-cover" />
         ) : (
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-paper-dark/60 text-lg">
-            🔗
+            {icon}
           </div>
         )}
-        <span className="min-w-0 flex-1 truncate text-xs text-ink-soft">{reference.value}</span>
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap text-xs text-ink-soft">
+          {reference.value}
+        </span>
         <button
           type="button"
           onClick={handleRemove}
@@ -90,43 +108,29 @@ export default function ReferencePicker({ reference, onChange }) {
     );
   }
 
+  // --- 未添付:1つの欄に「貼り付け(画像/URL/長文)」「入力してEnter」「画像を選ぶ(小さいアイコン)」を集約 ---
   return (
     <div>
-      <input
-        type="text"
-        readOnly={false}
-        value=""
-        onChange={() => {}} // ペースト以外の直接入力は無視する(貼り付け専用の見た目だけの欄)
-        onPaste={handlePaste}
-        placeholder={
-          uploading
-            ? "アップロード中…"
-            : "ここをタップしてから、画像やURLを貼り付け（Cmd/Ctrl+V）"
-        }
-        disabled={uploading}
-        className="tap-target flex min-h-[52px] w-full cursor-text items-center justify-center rounded-card border border-dashed border-line bg-paper-card px-3 text-center text-xs text-ink-faint placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
-      />
-      <div className="mt-1.5 flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <input
           type="text"
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          placeholder="またはURLを直接入力"
-          className="tap-target flex-1 rounded-card border border-line bg-paper px-2.5 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
+          value={typedValue}
+          onChange={(e) => setTypedValue(e.target.value)}
+          onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
+          disabled={uploading}
+          placeholder={
+            uploading ? "アップロード中…" : "画像・URL・引用文を貼り付け、または入力してEnter"
+          }
+          className="tap-target min-w-0 flex-1 rounded-card border border-dashed border-line bg-paper-card px-3 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
         <button
           type="button"
-          onClick={handleUrlSubmit}
-          className="tap-target shrink-0 rounded-full border border-line px-3 text-xs font-medium text-ink-soft active:bg-paper-dim"
-        >
-          追加
-        </button>
-        <button
-          type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="tap-target shrink-0 rounded-full border border-line px-3 text-xs font-medium text-ink-soft active:bg-paper-dim"
+          aria-label="画像を選ぶ"
+          className="tap-target flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-sm text-ink-soft active:bg-paper-dim"
         >
-          画像を選ぶ
+          🖼
         </button>
         <input
           ref={fileInputRef}
