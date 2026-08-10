@@ -194,8 +194,8 @@ const ReminderCard = forwardRef(function ReminderCard(
               <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
                 {item.body}
               </p>
-              {item.referenceType && (
-                <ReferencePreview type={item.referenceType} value={item.referenceValue} />
+              {item.references && item.references.length > 0 && (
+                <ReferencePreview items={item.references} />
               )}
             </div>
           </div>
