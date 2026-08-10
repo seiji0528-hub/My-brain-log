@@ -148,6 +148,7 @@ export default function ReferencePicker({ references, onChange }) {
             onChange={(e) => setTypedValue(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
+            onBlur={commitTypedValue}
             disabled={uploading}
             rows={1}
             onInput={(e) => {
