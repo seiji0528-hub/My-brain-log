@@ -22,11 +22,9 @@ export default function CardForm({
   // 初期データがある場合は最初から review 画面にする
   const [step, setStep] = useState(initialData ? "review" : "raw");
 
-  // 参考資料(画像 or URL。1枚のカードにつき1つだけ)
-  const [reference, setReference] = useState(
-    initialData?.referenceType
-      ? { type: initialData.referenceType, value: initialData.referenceValue }
-      : null
+  // 参考資料(画像・URL・引用文を、最大3つまで組み合わせ可能)
+  const [references, setReferences] = useState(
+    Array.isArray(initialData?.references) ? initialData.references : []
   );
 
   // タイトル案（候補として表示し、タップした時だけ反映）用のステート
@@ -178,8 +176,7 @@ export default function CardForm({
       title: title.trim() || "（無題の思考）",
       body: body.trim(),
       tags: normalizeTags(tagsText),
-      referenceType: reference?.type || null,
-      referenceValue: reference?.value || null,
+      references,
     });
   }
 
@@ -222,7 +219,7 @@ export default function CardForm({
                 <label className="mb-1 block text-xs font-medium text-ink-faint">
                   参考資料（任意）
                 </label>
-                <ReferencePicker reference={reference} onChange={setReference} />
+                <ReferencePicker references={references} onChange={setReferences} />
               </div>
             </div>
           )}
@@ -374,7 +371,7 @@ export default function CardForm({
                 <label className="mb-1 block text-xs font-medium text-ink-faint">
                   参考資料（任意）
                 </label>
-                <ReferencePicker reference={reference} onChange={setReference} />
+                <ReferencePicker references={references} onChange={setReferences} />
               </div>
             </div>
           )}
