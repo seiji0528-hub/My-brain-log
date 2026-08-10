@@ -11,6 +11,11 @@ export default function ReferencePicker({ references, onChange }) {
   const [typedValue, setTypedValue] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  function resetTextareaHeight() {
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  }
 
   const list = Array.isArray(references) ? references : [];
   const isFull = list.length >= MAX_REFERENCES;
@@ -62,6 +67,7 @@ export default function ReferencePicker({ references, onChange }) {
         addReference({ type: "text", value: text });
       }
       setTypedValue("");
+      resetTextareaHeight();
     }
   }
 
@@ -75,11 +81,13 @@ export default function ReferencePicker({ references, onChange }) {
       addReference({ type: "text", value: v });
     }
     setTypedValue("");
+    resetTextareaHeight();
     setError("");
   }
 
   function handleKeyDown(e) {
-    if (e.key === "Enter") {
+    // Cmd/Ctrl+Enterはショートカットとして追加。ただのEnterは改行として使えるようにする
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       commitTypedValue();
     }
@@ -133,27 +141,47 @@ export default function ReferencePicker({ references, onChange }) {
       )}
 
       {!isFull && (
-        <div className="flex items-center gap-1.5">
-          <input
-            type="text"
+        <div className="flex items-end gap-1.5">
+          <textarea
+            ref={textareaRef}
             value={typedValue}
             onChange={(e) => setTypedValue(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             disabled={uploading}
+            rows={1}
+            onInput={(e) => {
+              // 入力に合わせて高さを自動調整する
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+            }}
             placeholder={
-              uploading ? "アップロード中…" : "画像・URL・引用文を貼り付け、または入力してEnter"
+              uploading
+                ? "アップロード中…"
+                : "画像・URL・引用文を貼り付け、または入力（改行OK）"
             }
-            className="tap-target min-w-0 flex-1 rounded-card border border-dashed border-line bg-paper-card px-3 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="tap-target min-w-0 flex-1 resize-none rounded-card border border-dashed border-line bg-paper-card px-3 py-2 text-xs leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="画像を選ぶ"
-            className="tap-target flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-sm text-ink-soft active:bg-paper-dim"
-          >
-            🖼
-          </button>
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="画像を選ぶ"
+              className="tap-target flex h-9 w-9 items-center justify-center rounded-full border border-line text-sm text-ink-soft active:bg-paper-dim"
+            >
+              🖼
+            </button>
+            {typedValue.trim() && (
+              <button
+                type="button"
+                onClick={commitTypedValue}
+                aria-label="追加"
+                className="tap-target flex h-9 w-9 items-center justify-center rounded-full bg-accent text-sm text-paper active:scale-95"
+              >
+                ＋
+              </button>
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
