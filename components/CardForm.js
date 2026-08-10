@@ -43,6 +43,15 @@ export default function CardForm({
   // タグ入力の前方一致サジェスト用
   const [tagInputFocused, setTagInputFocused] = useState(false);
 
+  // モーダルが開いている間、背面(カード一覧など)がスクロールしてしまわないようにする
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   // 再利用（コピー）用データが渡された場合にフォームへセット
   useEffect(() => {
     if (initialData) {
@@ -193,7 +202,7 @@ export default function CardForm({
         </div>
 
         {/* 入力エリア */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           {step === "raw" && (
             <div className="flex flex-col gap-3">
               <label className="text-xs font-medium text-ink-faint">
@@ -208,6 +217,13 @@ export default function CardForm({
                 className="w-full resize-none rounded-card border border-line bg-paper-card p-3 text-sm leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
               />
               {aiError && <p className="text-xs text-[#93445A]">{aiError}</p>}
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-faint">
+                  参考資料（任意）
+                </label>
+                <ReferencePicker reference={reference} onChange={setReference} />
+              </div>
             </div>
           )}
 
