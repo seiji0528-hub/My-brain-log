@@ -48,8 +48,8 @@ export default function CardItem({
               {card.body}
             </p>
           )}
-          {card.referenceType && (
-            <ReferencePreview type={card.referenceType} value={card.referenceValue} />
+          {card.references && card.references.length > 0 && (
+            <ReferencePreview items={card.references} />
           )}
         </div>
       </div>
