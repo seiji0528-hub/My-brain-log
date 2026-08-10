@@ -17,7 +17,7 @@ function getYouTubeId(url) {
   return null;
 }
 
-export default function ReferencePreview({ type, value }) {
+function ReferenceItem({ type, value }) {
   const [open, setOpen] = useState(false);
   const [linkMeta, setLinkMeta] = useState(null);
   const [linkMetaLoading, setLinkMetaLoading] = useState(false);
@@ -194,5 +194,17 @@ export default function ReferencePreview({ type, value }) {
         </span>
       </span>
     </a>
+  );
+}
+
+export default function ReferencePreview({ items }) {
+  const list = Array.isArray(items) ? items : [];
+  if (list.length === 0) return null;
+  return (
+    <div className="flex shrink-0 flex-wrap items-start gap-1.5">
+      {list.map((ref, i) => (
+        <ReferenceItem key={i} type={ref.type} value={ref.value} />
+      ))}
+    </div>
   );
 }
