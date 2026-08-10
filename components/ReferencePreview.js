@@ -49,6 +49,40 @@ export default function ReferencePreview({ type, value }) {
 
   if (!type || !value) return null;
 
+  // --- 引用テキスト(長文もOK。タップで全文をモーダル表示、改行も保持) ---
+  if (type === "text") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-line bg-paper text-lg text-ink-faint"
+        >
+          ❝
+        </button>
+        {open && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
+          >
+            <div
+              className="max-h-[70vh] w-full max-w-md overflow-y-auto rounded-2xl bg-paper p-5 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{value}</p>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   // --- 画像 ---
   if (type === "image") {
     return (
