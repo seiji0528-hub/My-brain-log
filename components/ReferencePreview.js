@@ -49,7 +49,7 @@ function ReferenceItem({ type, value }) {
 
   if (!type || !value) return null;
 
-  // --- 引用テキスト(長文もOK。タップで全文をモーダル表示、改行も保持) ---
+  // --- 引用テキスト ---
   if (type === "text") {
     return (
       <>
@@ -59,9 +59,10 @@ function ReferenceItem({ type, value }) {
             e.stopPropagation();
             setOpen(true);
           }}
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-line bg-paper text-lg text-ink-faint"
+          className="flex h-20 w-36 shrink-0 snap-start flex-col justify-center gap-1 rounded-lg border border-line bg-paper px-2.5 py-2 text-left"
         >
-          ❝
+          <span className="text-sm text-ink-faint">❝</span>
+          <span className="line-clamp-2 text-[11px] leading-snug text-ink-soft">{value}</span>
         </button>
         {open && (
           <div
@@ -93,7 +94,7 @@ function ReferenceItem({ type, value }) {
             e.stopPropagation();
             setOpen(true);
           }}
-          className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-line"
+          className="h-20 w-28 shrink-0 snap-start overflow-hidden rounded-lg border border-line"
         >
           <img src={value} alt="参考資料" className="h-full w-full object-cover" />
         </button>
@@ -122,7 +123,7 @@ function ReferenceItem({ type, value }) {
             e.stopPropagation();
             setOpen(true);
           }}
-          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-line"
+          className="relative h-20 w-32 shrink-0 snap-start overflow-hidden rounded-lg border border-line"
         >
           <img
             src={`https://img.youtube.com/vi/${youTubeId}/hqdefault.jpg`}
@@ -130,9 +131,12 @@ function ReferenceItem({ type, value }) {
             className="h-full w-full object-cover"
           />
           <span className="absolute inset-0 flex items-center justify-center bg-black/25">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[10px] text-ink">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-xs text-ink">
               ▶
             </span>
+          </span>
+          <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[9px] font-bold text-white">
+            YouTube
           </span>
         </button>
         {open && (
@@ -161,8 +165,7 @@ function ReferenceItem({ type, value }) {
     );
   }
 
-  // --- その他のURL:多くのサイトはアプリ内埋め込み表示をブロックしているため、
-  // 他の添付(画像・引用・YouTube)と同じ正方形アイコンにし、タップで詳細をモーダル表示する ---
+  // --- その他のURL:写真と見分けがつくよう🔗バッジを付ける。タップで詳細をモーダル表示 ---
   let hostname = value;
   try {
     hostname = new URL(value).hostname;
@@ -178,15 +181,25 @@ function ReferenceItem({ type, value }) {
           e.stopPropagation();
           setOpen(true);
         }}
-        className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-line bg-paper"
+        className="flex h-20 w-36 shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-line bg-paper text-left"
       >
-        {linkMeta?.image ? (
-          <img src={linkMeta.image} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-lg text-ink-faint">
-            🔗
+        <div className="relative h-11 w-full shrink-0 bg-paper-dim">
+          {linkMeta?.image ? (
+            <img src={linkMeta.image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-sm text-ink-faint">
+              🔗
+            </span>
+          )}
+          <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[8px] font-bold text-white">
+            🔗 LINK
           </span>
-        )}
+        </div>
+        <div className="min-w-0 flex-1 px-1.5 py-1">
+          <p className="line-clamp-2 text-[10px] leading-snug text-ink">
+            {linkMetaLoading ? "読み込み中…" : linkMeta?.title || hostname}
+          </p>
+        </div>
       </button>
       {open && (
         <div
@@ -231,7 +244,7 @@ export default function ReferencePreview({ items }) {
   const list = Array.isArray(items) ? items : [];
   if (list.length === 0) return null;
   return (
-    <div className="flex w-[60px] shrink-0 flex-wrap justify-end gap-1.5 sm:w-[122px]">
+    <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 py-0.5 no-scrollbar">
       {list.map((ref, i) => (
         <ReferenceItem key={i} type={ref.type} value={ref.value} />
       ))}
