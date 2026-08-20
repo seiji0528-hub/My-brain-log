@@ -162,7 +162,7 @@ function ReferenceItem({ type, value }) {
   }
 
   // --- その他のURL:多くのサイトはアプリ内埋め込み表示をブロックしているため、
-  // OGP情報(タイトル・画像)だけ小さくプレビューし、タップで外部タブへ開く ---
+  // 他の添付(画像・引用・YouTube)と同じ正方形アイコンにし、タップで詳細をモーダル表示する ---
   let hostname = value;
   try {
     hostname = new URL(value).hostname;
@@ -171,29 +171,59 @@ function ReferenceItem({ type, value }) {
   }
 
   return (
-    <a
-      href={value}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className="flex max-w-[220px] items-center gap-2 overflow-hidden rounded-lg border border-line bg-paper px-2 py-1.5 text-left"
-    >
-      {linkMeta?.image ? (
-        <img src={linkMeta.image} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
-      ) : (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-paper-dark/60 text-xs text-ink-faint">
-          🔗
-        </span>
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-line bg-paper"
+      >
+        {linkMeta?.image ? (
+          <img src={linkMeta.image} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-lg text-ink-faint">
+            🔗
+          </span>
+        )}
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-2xl bg-paper shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {linkMeta?.image && (
+              <img src={linkMeta.image} alt="" className="h-40 w-full object-cover" />
+            )}
+            <div className="p-4">
+              <p className="text-sm font-bold leading-snug text-ink">
+                {linkMetaLoading ? "読み込み中…" : linkMeta?.title || value}
+              </p>
+              <p className="mt-1 truncate text-xs text-ink-faint">
+                {linkMeta?.siteName || hostname}
+              </p>
+              <a
+                href={value}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="tap-target mt-3 inline-flex items-center justify-center rounded-full bg-accent px-4 text-xs font-bold text-paper active:scale-95"
+              >
+                外部で開く ↗
+              </a>
+            </div>
+          </div>
+        </div>
       )}
-      <span className="min-w-0">
-        <span className="block truncate text-xs font-medium text-ink">
-          {linkMetaLoading ? "読み込み中…" : linkMeta?.title || value}
-        </span>
-        <span className="block truncate text-[10px] text-ink-faint">
-          {linkMeta?.siteName || hostname}
-        </span>
-      </span>
-    </a>
+    </>
   );
 }
 
@@ -201,7 +231,7 @@ export default function ReferencePreview({ items }) {
   const list = Array.isArray(items) ? items : [];
   if (list.length === 0) return null;
   return (
-    <div className="flex shrink-0 flex-wrap items-start gap-1.5">
+    <div className="flex w-[60px] shrink-0 flex-wrap justify-end gap-1.5 sm:w-[122px]">
       {list.map((ref, i) => (
         <ReferenceItem key={i} type={ref.type} value={ref.value} />
       ))}
