@@ -1,27 +1,65 @@
 @import url("https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Noto+Serif+JP:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ライトモード(既定値) */
+:root {
+  --color-paper: 246 243 236; /* #F6F3EC */
+  --color-paper-dim: 237 233 222; /* #EDE9DE */
+  --color-paper-card: 252 250 245; /* #FCFAF5 */
+
+  --color-ink: 34 37 43; /* #22252B */
+  --color-ink-soft: 74 78 88; /* #4A4E58 */
+  --color-ink-faint: 138 141 150; /* #8A8D96 */
+
+  --color-line: 220 214 199; /* #DCD6C7 */
+
+  --color-accent: 43 69 104; /* #2B4568 */
+  --color-accent-soft: 63 92 130; /* #3F5C82 */
+  --color-accent-pale: 220 228 238; /* #DCE4EE */
+
+  --color-gold: 180 130 63; /* #B4823F */
+  --color-gold-pale: 241 228 204; /* #F1E4CC */
+}
+
+/* ダークモード:iPhone/OSの設定が「ダーク」の時だけ自動的にこちらが使われる */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: 23 22 19; /* #171613 - 温かみを残した濃いチャコール */
+    --color-paper-dim: 32 31 27; /* #201F1B */
+    --color-paper-card: 35 34 32; /* #232220 - 背景より少し明るいカード面 */
+
+    --color-ink: 237 234 226; /* #EDEAE2 - オフホワイトの本文色 */
+    --color-ink-soft: 184 180 168; /* #B8B4A8 */
+    --color-ink-faint: 124 121 112; /* #7C7970 */
+
+    --color-line: 56 54 47; /* #38362F */
+
+    --color-accent: 92 127 166; /* #5C7FA6 - 暗い背景でも視認できる明るめの青 */
+    --color-accent-soft: 122 154 192; /* #7A9AC0 */
+    --color-accent-pale: 38 54 74; /* #26364A - ダーク版は「淡い背景」ではなく「暗く沈んだ青」に */
+
+    --color-gold: 210 164 101; /* #D2A465 */
+    --color-gold-pale: 58 46 28; /* #3A2E1C */
+  }
+}
 
 html,
 body {
   overflow-x: hidden;
   width: 100%;
   max-width: 100%;
-  background-color: #f6f3ec;
+  background-color: rgb(var(--color-paper));
 }
-
 body {
-  color: #22252b;
+  color: rgb(var(--color-ink));
   font-family: "Noto Sans JP", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
-
 * {
   box-sizing: border-box;
 }
-
 /* iPhone のホームバー等セーフエリア対応 */
 .safe-top {
   padding-top: env(safe-area-inset-top);
@@ -29,29 +67,25 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
-
 /* タップ領域は最低44pxを確保 */
 .tap-target {
   min-height: 44px;
   min-width: 44px;
 }
-
 /* フォーム入力時にiOSが自動ズームしないよう16px以上を確保 */
 input,
 textarea,
 select {
   font-size: 16px;
 }
-
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #dcd6c7;
+  background-color: rgb(var(--color-line));
   border-radius: 999px;
 }
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -65,7 +99,6 @@ select {
 .animate-fade-in {
   animation: fade-in 0.18s ease-out;
 }
-
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
