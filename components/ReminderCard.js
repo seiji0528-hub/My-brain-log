@@ -190,14 +190,16 @@ const ReminderCard = forwardRef(function ReminderCard(
                 {formatDate(item.createdAt)}
               </span>
             </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
-              {item.body}
-            </p>
-            {item.references && item.references.length > 0 && (
-              <div className="mt-2">
-                <ReferencePreview items={item.references} />
-              </div>
-            )}
+            <div className="mt-2 flex items-start gap-2.5">
+              <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
+                {item.body}
+              </p>
+              {item.references && item.references.length > 0 && (
+                <div className="w-36 shrink-0">
+                  <ReferencePreview items={item.references} />
+                </div>
+              )}
+            </div>
           </div>
 
           {item.tags && item.tags.length > 0 && (
