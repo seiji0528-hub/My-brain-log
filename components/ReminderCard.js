@@ -195,7 +195,7 @@ const ReminderCard = forwardRef(function ReminderCard(
                 {item.body}
               </p>
               {item.references && item.references.length > 0 && (
-                <div className="w-36 shrink-0">
+                <div className="w-44 shrink-0">
                   <ReferencePreview items={item.references} />
                 </div>
               )}
