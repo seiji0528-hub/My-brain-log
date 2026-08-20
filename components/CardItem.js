@@ -38,20 +38,22 @@ export default function CardItem({
             {formatDate(card.createdAt)}
           </span>
         </div>
-        {!expanded ? (
-          <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-ink-soft">
-            {card.body}
-          </p>
-        ) : (
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
-            {card.body}
-          </p>
-        )}
-        {card.references && card.references.length > 0 && (
-          <div className="mt-2">
-            <ReferencePreview items={card.references} />
-          </div>
-        )}
+        <div className="mt-1.5 flex items-start gap-2.5">
+          {!expanded ? (
+            <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-ink-soft">
+              {card.body}
+            </p>
+          ) : (
+            <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
+              {card.body}
+            </p>
+          )}
+          {card.references && card.references.length > 0 && (
+            <div className="w-36 shrink-0">
+              <ReferencePreview items={card.references} />
+            </div>
+          )}
+        </div>
       </div>
       {card.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-4 pb-3 pl-5">
