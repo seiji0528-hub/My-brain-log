@@ -135,9 +135,6 @@ function ReferenceItem({ type, value }) {
               ▶
             </span>
           </span>
-          <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[9px] font-bold text-white">
-            YouTube
-          </span>
         </button>
         {open && (
           <div
@@ -165,7 +162,7 @@ function ReferenceItem({ type, value }) {
     );
   }
 
-  // --- その他のURL:写真と見分けがつくよう🔗バッジを付ける。タップで詳細をモーダル表示 ---
+  // --- その他のURL:サムネイル(あれば)+タイトルの2段。タップで詳細をモーダル表示 ---
   let hostname = value;
   try {
     hostname = new URL(value).hostname;
@@ -183,17 +180,10 @@ function ReferenceItem({ type, value }) {
         }}
         className="flex h-20 w-36 shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-line bg-paper text-left"
       >
-        <div className="relative h-11 w-full shrink-0 bg-paper-dim">
-          {linkMeta?.image ? (
+        <div className="h-11 w-full shrink-0 bg-paper-dim">
+          {linkMeta?.image && (
             <img src={linkMeta.image} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-sm text-ink-faint">
-              🔗
-            </span>
           )}
-          <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[8px] font-bold text-white">
-            🔗 LINK
-          </span>
         </div>
         <div className="min-w-0 flex-1 px-1.5 py-1">
           <p className="line-clamp-2 text-[10px] leading-snug text-ink">
