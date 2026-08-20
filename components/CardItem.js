@@ -49,7 +49,7 @@ export default function CardItem({
             </p>
           )}
           {card.references && card.references.length > 0 && (
-            <div className="w-36 shrink-0">
+            <div className="w-44 shrink-0">
               <ReferencePreview items={card.references} />
             </div>
           )}
