@@ -5,7 +5,10 @@ export const metadata = {
   description: "1カード=1思考。日々の気づきを蓄積し、AIが関連付けてくれる第二の脳。",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // "default"だとiOSがステータスバー部分を独自の色で塗りつぶしてしまう。
+    // "black-translucent"にすることで背景を透過させ、実際のページの中身
+    // (裏ページの夜景など)がステータスバーの裏まで自然に見えるようにする。
+    statusBarStyle: "black-translucent",
     title: "BrainLog",
   },
 };
