@@ -18,7 +18,10 @@ export default function PinnedTagsBar({ pinnedTags, activeTag, onTagToggle, onTa
   if (!pinnedTags || pinnedTags.length === 0) return null;
 
   return (
-    <div className="fixed right-8 top-4 z-20 flex flex-col items-end gap-2.5">
+    <div
+      className="fixed right-8 z-20 flex flex-col items-end gap-2.5"
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
+    >
       {pinnedTags.map((t, i) => (
         <div
           key={t}
