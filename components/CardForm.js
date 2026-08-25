@@ -41,6 +41,61 @@ export default function CardForm({
   // タグ入力の前方一致サジェスト用
   const [tagInputFocused, setTagInputFocused] = useState(false);
 
+  // 下書きの自動保存(新規作成時のみ。再利用/編集フォームでは使わない)
+  const [draftRestored, setDraftRestored] = useState(false);
+  const DRAFT_KEY = "cardform_draft";
+
+  // 起動時:保存済みの下書きがあれば復元する
+  useEffect(() => {
+    if (initialData) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const hasContent =
+        (draft.rawText || "").trim() ||
+        (draft.title || "").trim() ||
+        (draft.body || "").trim() ||
+        (draft.tagsText || "").trim() ||
+        (Array.isArray(draft.references) && draft.references.length > 0);
+      if (!hasContent) return;
+
+      setRawText(draft.rawText || "");
+      setTitle(draft.title || "");
+      setBody(draft.body || "");
+      setTagsText(draft.tagsText || "");
+      setReferences(Array.isArray(draft.references) ? draft.references : []);
+      setStep(draft.step === "review" ? "review" : "raw");
+      setDraftRestored(true);
+    } catch (e) {
+      // 壊れた下書きは無視する
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 入力のたびに(少し間を置いて)自動保存する。閉じるタイミングを狙うのではなく、
+  // 常に保存しておくことで、iOSがアプリを裏で終了させても消えないようにする
+  useEffect(() => {
+    if (initialData) return;
+    const timer = setTimeout(() => {
+      const hasContent =
+        rawText.trim() || title.trim() || body.trim() || tagsText.trim() || references.length > 0;
+      try {
+        if (!hasContent) {
+          localStorage.removeItem(DRAFT_KEY);
+          return;
+        }
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ step, rawText, title, body, tagsText, references, savedAt: Date.now() })
+        );
+      } catch (e) {
+        // 保存できなくても致命的ではないので無視する
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [initialData, step, rawText, title, body, tagsText, references]);
+
   // モーダルが開いている間、背面(カード一覧など)がスクロールしてしまわないようにする
   useEffect(() => {
     const original = document.body.style.overflow;
@@ -178,6 +233,11 @@ export default function CardForm({
       tags: normalizeTags(tagsText),
       references,
     });
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      // 無視してよい
+    }
   }
 
   return (
@@ -197,6 +257,20 @@ export default function CardForm({
             ×
           </button>
         </div>
+
+        {draftRestored && (
+          <div className="flex shrink-0 items-center justify-between gap-2 bg-accent-pale px-4 py-2 text-xs text-ink">
+            <span>前回の続きを復元しました</span>
+            <button
+              type="button"
+              onClick={() => setDraftRestored(false)}
+              className="tap-target shrink-0 rounded-full px-2 text-ink-faint active:bg-paper-dim"
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* 入力エリア */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
