@@ -333,6 +333,7 @@ export default function Home() {
           allTags={allTags}
           tagFrequency={tagFrequency}
           pinnedTags={pinnedTags}
+          defaultTag={activeTag}
         />
       )}
 
