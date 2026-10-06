@@ -12,11 +12,12 @@ export default function CardForm({
   allTags = [],
   tagFrequency = {},
   pinnedTags = [],
+  defaultTag = null,
 }) {
   const [rawText, setRawText] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [tagsText, setTagsText] = useState("");
+  const [tagsText, setTagsText] = useState(!initialData && defaultTag ? defaultTag : "");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   // 初期データがある場合は最初から review 画面にする
@@ -56,14 +57,18 @@ export default function CardForm({
         (draft.rawText || "").trim() ||
         (draft.title || "").trim() ||
         (draft.body || "").trim() ||
-        (draft.tagsText || "").trim() ||
+        (draft.tagsText || "").trim() !== (defaultTag || "") && (draft.tagsText || "").trim() ||
         (Array.isArray(draft.references) && draft.references.length > 0);
       if (!hasContent) return;
 
       setRawText(draft.rawText || "");
       setTitle(draft.title || "");
       setBody(draft.body || "");
-      setTagsText(draft.tagsText || "");
+      {
+        const restored = normalizeTags(draft.tagsText || "");
+        if (defaultTag && !restored.includes(defaultTag)) restored.push(defaultTag);
+        setTagsText(restored.join(" "));
+      }
       setReferences(Array.isArray(draft.references) ? draft.references : []);
       setStep(draft.step === "review" ? "review" : "raw");
       setDraftRestored(true);
@@ -79,7 +84,7 @@ export default function CardForm({
     if (initialData) return;
     const timer = setTimeout(() => {
       const hasContent =
-        rawText.trim() || title.trim() || body.trim() || tagsText.trim() || references.length > 0;
+        rawText.trim() || title.trim() || body.trim() || (tagsText.trim() && tagsText.trim() !== (defaultTag || "")) || references.length > 0;
       try {
         if (!hasContent) {
           localStorage.removeItem(DRAFT_KEY);
@@ -122,7 +127,11 @@ export default function CardForm({
     try {
       const result = await formatRawText(rawText);
       setBody(result.body);
-      setTagsText(result.tags.join(" "));
+      {
+        const merged = [...result.tags];
+        if (!initialData && defaultTag && !merged.includes(defaultTag)) merged.push(defaultTag);
+        setTagsText(merged.join(" "));
+      }
       setStep("review");
     } catch (e) {
       setAiError(e.message || "AI整形に失敗しました。手動で入力してください。");
