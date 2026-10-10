@@ -256,6 +256,9 @@ export default function CardForm({
         <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
           <h2 className="font-display text-base font-bold">
             {initialData ? "思考を再利用・編集" : "新しい思考を記録"}
+            <span className="ml-2 text-xs font-normal text-ink-faint">
+              {step === "raw" ? "(1/2)" : "(2/2)"}
+            </span>
           </h2>
           <button
             type="button"
