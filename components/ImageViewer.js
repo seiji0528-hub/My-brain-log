@@ -10,6 +10,7 @@ const DOUBLE_TAP_SCALE = 2.5;
 export default function ImageViewer({ src, alt = "", onClose }) {
   const overlayRef = useRef(null);
   const imgRef = useRef(null);
+  const suppressClickRef = useRef(false);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
@@ -28,6 +29,8 @@ export default function ImageViewer({ src, alt = "", onClose }) {
     let lastTap = 0;
     let lastTapPos = null;
     let moved = false;
+    let lastTouchAt = 0;
+    let mouseDrag = null;
 
     const apply = () => {
       img.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
@@ -66,6 +69,7 @@ export default function ImageViewer({ src, alt = "", onClose }) {
     };
 
     const onStart = (e) => {
+      lastTouchAt = Date.now();
       e.stopPropagation();
       if (e.touches.length === 2) {
         const [a, b] = e.touches;
@@ -200,7 +204,49 @@ export default function ImageViewer({ src, alt = "", onClose }) {
     const onWheel = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      zoomAt(rel(e.clientX, e.clientY), s * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+      // トラックパッドのピンチ(ctrlKey付き)はイベントが細かく大量に来るので係数を変える
+      let d = e.deltaY;
+      if (e.deltaMode === 1) d *= 16; // 行単位→px換算
+      d = Math.max(-100, Math.min(100, d));
+      const k = e.ctrlKey ? 0.01 : 0.0015;
+      zoomAt(rel(e.clientX, e.clientY), s * Math.exp(-d * k));
+    };
+
+    // PC: 拡大中はマウスドラッグで移動
+    const onMouseDown = (e) => {
+      e.stopPropagation();
+      if (Date.now() - lastTouchAt < 600) return; // タッチ由来の擬似マウスイベントは無視
+      if (s <= 1 || e.button !== 0) return;
+      e.preventDefault();
+      mouseDrag = { x0: e.clientX, y0: e.clientY, tx0: tx, ty0: ty, moved: false };
+      overlay.style.cursor = "grabbing";
+    };
+    const onMouseMove = (e) => {
+      if (!mouseDrag) return;
+      const dx = e.clientX - mouseDrag.x0;
+      const dy = e.clientY - mouseDrag.y0;
+      if (Math.abs(dx) + Math.abs(dy) > 3) mouseDrag.moved = true;
+      tx = mouseDrag.tx0 + dx;
+      ty = mouseDrag.ty0 + dy;
+      apply();
+    };
+    const onMouseUp = () => {
+      if (!mouseDrag) return;
+      if (mouseDrag.moved) {
+        // ドラッグ後のclickで閉じてしまわないようにする
+        suppressClickRef.current = true;
+        setTimeout(() => {
+          suppressClickRef.current = false;
+        }, 0);
+      }
+      mouseDrag = null;
+      overlay.style.cursor = "";
+      clamp();
+      img.style.transition = "transform 0.15s ease-out";
+      apply();
+      setTimeout(() => {
+        if (img) img.style.transition = "";
+      }, 180);
     };
 
     const stop = (e) => e.stopPropagation();
@@ -213,7 +259,9 @@ export default function ImageViewer({ src, alt = "", onClose }) {
     overlay.addEventListener("pointerdown", stop);
     overlay.addEventListener("pointermove", stop);
     overlay.addEventListener("pointerup", stop);
-    overlay.addEventListener("mousedown", stop);
+    overlay.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
 
     return () => {
       document.body.style.overflow = prevOverflow;
@@ -225,7 +273,9 @@ export default function ImageViewer({ src, alt = "", onClose }) {
       overlay.removeEventListener("pointerdown", stop);
       overlay.removeEventListener("pointermove", stop);
       overlay.removeEventListener("pointerup", stop);
-      overlay.removeEventListener("mousedown", stop);
+      overlay.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
     };
   }, []);
 
@@ -238,6 +288,7 @@ export default function ImageViewer({ src, alt = "", onClose }) {
       style={{ touchAction: "none" }}
       onClick={(e) => {
         e.stopPropagation();
+        if (suppressClickRef.current) return;
         if (e.target === e.currentTarget) closeRef.current?.();
       }}
     >
