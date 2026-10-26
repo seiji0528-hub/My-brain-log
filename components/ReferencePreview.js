@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ImageViewer from "./ImageViewer";
 
 function getYouTubeId(url) {
   try {
@@ -98,17 +99,7 @@ function ReferenceItem({ type, value }) {
         >
           <img src={value} alt="参考資料" className="h-full w-full object-cover" />
         </button>
-        {open && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen(false);
-            }}
-          >
-            <img src={value} alt="参考資料" className="max-h-full max-w-full rounded-lg" />
-          </div>
-        )}
+        {open && <ImageViewer src={value} alt="参考資料" onClose={() => setOpen(false)} />}
       </>
     );
   }
