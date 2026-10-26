@@ -80,7 +80,7 @@ export default function ImageViewer({ src, alt = "", onClose }) {
         moved = true;
       } else if (e.touches.length === 1) {
         const t = e.touches[0];
-        gesture = { mode: "pan", x0: t.clientX, y0: t.clientY, tx0: tx, ty0: ty };
+        gesture = { mode: "pan", x0: t.clientX, y0: t.clientY, tx0: tx, ty0: ty, t0: Date.now() };
         moved = false;
       }
     };
@@ -106,6 +106,14 @@ export default function ImageViewer({ src, alt = "", onClose }) {
           tx = gesture.tx0 + dx;
           ty = gesture.ty0 + dy;
           apply();
+        } else if (!gesture.noDismiss) {
+          // 拡大していない状態:指に追従して動かし、背景を薄くする(Xのように)
+          tx = dx;
+          ty = dy;
+          gesture.dy = dy;
+          apply();
+          const fade = Math.min(Math.abs(dy) / 300, 1);
+          overlay.style.backgroundColor = `rgba(0,0,0,${0.9 * (1 - fade)})`;
         }
       }
     };
@@ -115,7 +123,30 @@ export default function ImageViewer({ src, alt = "", onClose }) {
       if (e.touches.length === 0) {
         const wasPinch = gesture?.mode === "pinch";
         const wasTap = gesture?.mode === "pan" && !moved;
+
+        // 拡大していない状態で上下にスワイプしたら閉じる
+        if (gesture?.mode === "pan" && s <= 1 && !gesture.noDismiss && moved) {
+          const dy = gesture.dy || 0;
+          const elapsed = Math.max(1, Date.now() - gesture.t0);
+          const fast = Math.abs(dy) > 40 && Math.abs(dy) / elapsed > 0.6;
+          if (Math.abs(dy) > 110 || fast) {
+            gesture = null;
+            const dir = dy < 0 ? -1 : 1;
+            img.style.transition = "transform 0.2s ease-out";
+            overlay.style.transition = "background-color 0.2s ease-out";
+            ty = dir * window.innerHeight;
+            apply();
+            overlay.style.backgroundColor = "rgba(0,0,0,0)";
+            setTimeout(() => closeRef.current?.(), 200);
+            return;
+          }
+        }
         gesture = null;
+        overlay.style.transition = "background-color 0.15s ease-out";
+        overlay.style.backgroundColor = "";
+        setTimeout(() => {
+          if (overlay) overlay.style.transition = "";
+        }, 180);
         if (s < 1.02) {
           s = 1;
           tx = 0;
@@ -160,7 +191,7 @@ export default function ImageViewer({ src, alt = "", onClose }) {
       } else if (e.touches.length === 1) {
         // ピンチ→1本指になった場合は続けてドラッグできるようにする
         const t = e.touches[0];
-        gesture = { mode: "pan", x0: t.clientX, y0: t.clientY, tx0: tx, ty0: ty };
+        gesture = { mode: "pan", x0: t.clientX, y0: t.clientY, tx0: tx, ty0: ty, t0: Date.now(), noDismiss: true };
         moved = true;
       }
     };
